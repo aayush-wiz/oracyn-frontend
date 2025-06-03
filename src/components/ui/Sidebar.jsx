@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import SavedAnalysesModal from "./SavedAnalysesModal";
+import SavedAnalysesModal from "../modals/SavedAnalysesModal";
 
 // Import or define your dummy data here
 const dummyChats = [
@@ -199,7 +199,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
           {/* Toggle Button */}
           <button
             onClick={handleToggleSidebar}
-            className="w-10 h-10 bg-amber-200 mt-1 rounded-full flex items-center justify-center hover:bg-amber-300 transition-colors cursor-pointer"
+            className="w-10 h-10 bg-amber-200 mt-1 rounded-full flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer"
           >
             <svg
               className="w-6 h-6"
@@ -217,7 +217,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
           </button>
 
           {/* Start New Chat Icon */}
-          <button className="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center hover:bg-amber-300 transition-colors cursor-pointer">
+          <button className="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -234,7 +234,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
           </button>
 
           {/* Starred Icon */}
-          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center transition-colors cursor-pointer">
+          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -251,7 +251,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
           </div>
 
           {/* Recent Icon */}
-          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center cursor-pointer transition-colors">
+          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -273,7 +273,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
           {/* Profile Icon */}
           <button
             onClick={handleToggleProfileModal}
-            className="w-10 h-10 bg-amber-300 rounded-full flex items-center justify-center hover:bg-amber-400 transition-colors cursor-pointer"
+            className="w-10 h-10 bg-amber-300 rounded-full flex items-center justify-center hover:bg-amber-400 transition-all duration-500 cursor-pointer"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -316,7 +316,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleToggleSidebar}
-                className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center hover:bg-amber-300 transition-colors cursor-pointer"
+                className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer"
               >
                 <svg
                   className="w-6 h-6"
