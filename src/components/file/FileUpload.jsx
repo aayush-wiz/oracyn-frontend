@@ -13,6 +13,8 @@ const FileUpload = ({ onFilesUpload, onFileRemove }) => {
     "text/csv",
     "application/vnd.ms-excel", // .xls files
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx files
+    "application/vnd.ms-powerpoint", // .ppt files
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx files
   ];
 
   const handleDragOver = (e) => {
@@ -42,7 +44,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove }) => {
     const validFiles = files.filter((file) => {
       if (!allowedTypes.includes(file.type)) {
         alert(
-          `File type ${file.type} is not supported. Please upload PDF, Word, TXT, or CSV files.`
+          `File type ${file.type} is not supported. Please upload PDF, Word, TXT, excel, CSV or powerpoint files.`
         );
         return false;
       }
@@ -106,7 +108,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove }) => {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx"
+          accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.ppt,.pptx"
           onChange={handleFileInput}
           className="hidden"
         />

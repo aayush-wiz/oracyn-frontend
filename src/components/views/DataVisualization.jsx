@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { processFiles } from "../../utils/fileProcessors";
-import TableView from "./TableView";
 import TextView from "./TextView";
 import ErrorView from "./ErrorView";
 import ChartView from "./ChartView";
@@ -8,6 +7,9 @@ import WordCloudView from "./WordCloudView";
 import SummaryView from "./SummaryView";
 import PDFView from "./PDFView";
 import ViewTabs from "../ui/ViewTabs";
+import DocView from "./DocView";
+import PPTXView from "./PPTXView";
+import SpreedsheetView from "./SpreedsheetView";
 import FileSelector from "../file/FileSelector";
 
 const DataVisualization = ({ files }) => {
@@ -51,20 +53,77 @@ const DataVisualization = ({ files }) => {
       return <PDFView fileData={currentFileData} />;
     }
 
+    // For CSV/Excel files, use the specialized SpreadsheetView component
+    if (
+      currentFileData.data.type === "csv" ||
+      currentFileData.data.type === "excel"
+    ) {
+      return <SpreedsheetView fileData={currentFileData} />;
+    }
+
+    // For DOC/DOCX files, use the specialized DocView component
+    if (currentFileData.data.type === "document") {
+      return <DocView fileData={currentFileData} />;
+    }
+
+    // For TXT files, use the specialized TextView component
+    if (currentFileData.data.type === "text") {
+      return <TextView fileData={currentFileData} />;
+    }
+
+    // For PPT/PPTX files, use the specialized PPTXView component
+    if (currentFileData.data.type === "presentation") {
+      return <PPTXView fileData={currentFileData} />;
+    }
+
+    // For other file types, use the original view system with fallback handling
     switch (activeView) {
       case "table":
-        // Show table view for CSV/Excel, text view for text files, or error view for errors
+        // Show appropriate view based on file type or error state
         if (currentFileData.data.error) {
           return <ErrorView fileData={currentFileData} />;
-        } else if (currentFileData.data.type === "text") {
-          return <TextView fileData={currentFileData} />;
-        } else if (
-          currentFileData.data.type === "csv" ||
-          currentFileData.data.type === "excel"
-        ) {
-          return <TableView fileData={currentFileData} />;
+        } else {
+          // Generic fallback for other file types
+          return (
+            <div className="p-6 h-full flex flex-col">
+              <div className="bg-white rounded-lg border border-gray-200 h-full flex flex-col">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {currentFileData.name}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    File type: {currentFileData.type || "Unknown"}
+                  </p>
+                </div>
+                <div className="flex-1 p-6 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg
+                        className="w-8 h-8 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">
+                      File Type Not Supported
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      This file type doesn't have a specialized viewer yet.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
         }
-        break;
       case "chart":
         return <ChartView fileData={currentFileData} />;
       case "wordcloud":
@@ -106,9 +165,16 @@ const DataVisualization = ({ files }) => {
     );
   }
 
-  // For PDF files, don't show the standard navigation tabs since PDFView has its own tabs
+  // Determine if current file has a specialized view (no standard navigation tabs)
   const currentFileData = processedData && processedData[selectedFile];
-  const isPDFFile = currentFileData && currentFileData.data.type === "pdf";
+  const hasSpecializedView =
+    currentFileData &&
+    (currentFileData.data.type === "pdf" ||
+      currentFileData.data.type === "csv" ||
+      currentFileData.data.type === "excel" ||
+      currentFileData.data.type === "document" ||
+      currentFileData.data.type === "text" ||
+      currentFileData.data.type === "presentation");
 
   return (
     <div className="flex-1 h-screen bg-[#ffffe5] flex flex-col overflow-hidden">
@@ -135,8 +201,8 @@ const DataVisualization = ({ files }) => {
         />
       </div>
 
-      {/* Navigation Tabs - Only show for non-PDF files */}
-      {!isPDFFile && (
+      {/* Navigation Tabs - Only show for files without specialized views */}
+      {!hasSpecializedView && (
         <div className="flex-shrink-0">
           <ViewTabs activeView={activeView} onViewChange={setActiveView} />
         </div>

@@ -13,9 +13,7 @@ const PDFView = ({ fileData }) => {
         <div className="bg-white rounded-lg border border-gray-200 h-full flex flex-col">
           <div className="p-4 border-b border-gray-200 flex-shrink-0">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
-                PDF Viewer
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900">PDF Viewer</h3>
               <p className="text-sm text-gray-600 mt-1">
                 {fileData.data.renderedPages?.length
                   ? `Showing ${fileData.data.renderedPages.length} of ${fileData.data.numPages} pages`
@@ -71,9 +69,9 @@ const PDFView = ({ fileData }) => {
                               alt={`Page ${page.pageNumber}`}
                               className="block w-full h-auto max-w-full"
                               style={{
-                                maxWidth: '100%',
-                                height: 'auto',
-                                display: 'block',
+                                maxWidth: "100%",
+                                height: "auto",
+                                display: "block",
                               }}
                             />
                           </div>

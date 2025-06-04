@@ -20,4 +20,4 @@ const FileSelector = ({ files, selectedFile, onFileChange }) => {
   );
 };
 
-export default FileSelector; 
+export default FileSelector;
