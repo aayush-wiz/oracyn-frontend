@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import SavedAnalysesModal from "../modals/SavedAnalysesModal";
+import { Link } from "react-router-dom";
 
 // Import or define your dummy data here
 const dummyChats = [
@@ -83,7 +84,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
   const [openChatOptionId, setOpenChatOptionId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingName, setEditingName] = useState("");
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const modalRef = useRef(null);
 
@@ -105,19 +106,19 @@ const Sidebar = ({ onSelectAnalysis }) => {
 
   const handleToggleChatOptions = (chatId) => {
     setOpenChatOptionId(openChatOptionId === chatId ? null : chatId);
-    setIsProfileModalOpen(false); // Close profile modal when opening chat options
+    setIsSettingsModalOpen(false); // Close Settings modal when opening chat options
   };
 
-  const handleToggleProfileModal = () => {
-    setIsProfileModalOpen((prev) => !prev);
-    setOpenChatOptionId(null); // Close chat options when opening profile modal
+  const handleToggleSettingsModal = () => {
+    setIsSettingsModalOpen((prev) => !prev);
+    setOpenChatOptionId(null); // Close chat options when opening Settings modal
   };
 
   const handleToggleSidebar = () => {
     setIsMinimized(!isMinimized);
     // Close any open modals when toggling
     setOpenChatOptionId(null);
-    setIsProfileModalOpen(false);
+    setIsSettingsModalOpen(false);
   };
 
   const handleStarChat = (chatId) => {
@@ -170,18 +171,18 @@ const Sidebar = ({ onSelectAnalysis }) => {
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
         setOpenChatOptionId(null);
-        setIsProfileModalOpen(false);
+        setIsSettingsModalOpen(false);
       }
     };
 
-    if (openChatOptionId || isProfileModalOpen) {
+    if (openChatOptionId || isSettingsModalOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [openChatOptionId, isProfileModalOpen]);
+  }, [openChatOptionId, isSettingsModalOpen]);
 
   // Separate starred and regular chats
   const starredChats = chats.filter((chat) => chat.isStarred);
@@ -201,6 +202,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
             onClick={handleToggleSidebar}
             className="w-10 h-10 bg-amber-200 mt-1 rounded-full flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer"
           >
+            {/* Minimized Sidebar Toggle Button */}
             <svg
               className="w-6 h-6"
               fill="none"
@@ -270,9 +272,9 @@ const Sidebar = ({ onSelectAnalysis }) => {
           {/* Spacer */}
           <div className="flex-1"></div>
 
-          {/* Profile Icon */}
+          {/* Settings Icon */}
           <button
-            onClick={handleToggleProfileModal}
+            onClick={handleToggleSettingsModal}
             className="w-10 h-10 bg-amber-300 rounded-full flex items-center justify-center hover:bg-amber-400 transition-all duration-500 cursor-pointer"
           >
             <svg
@@ -289,14 +291,14 @@ const Sidebar = ({ onSelectAnalysis }) => {
             </svg>
           </button>
 
-          {/* Profile Modal for Minimized View */}
-          {isProfileModalOpen && (
+          {/* Settings Modal for Minimized View */}
+          {isSettingsModalOpen && (
             <div
               ref={modalRef}
               className="absolute right-2 bottom-16 w-40 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-500"
             >
               <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                Profile
+                Settings
               </div>
               <div className="h-px bg-amber-200 my-1"></div>
               <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
@@ -332,9 +334,11 @@ const Sidebar = ({ onSelectAnalysis }) => {
                   />
                 </svg>
               </button>
-              <div className="text-2xl flex items-center underline font-bold h-14">
-                DocAnalyzer
-              </div>
+              <Link to="/dashboard">
+                <div className="text-2xl flex items-center underline font-bold h-14 cursor-pointer">
+                  DocAnalyzer
+                </div>
+              </Link>
             </div>
             <div className="flex flex-col gap-2">
               {/* Start a new chat */}
@@ -549,14 +553,14 @@ const Sidebar = ({ onSelectAnalysis }) => {
             </div>
           </div>
 
-          {/* Fixed Profile Section */}
+          {/* Fixed Settings Section */}
           <div className="flex-shrink-0 p-2 border-t">
-            {/* Profile */}
+            {/* Settings */}
             <div className="relative">
               <button
-                onClick={handleToggleProfileModal}
+                onClick={handleToggleSettingsModal}
                 className={`flex flex-col gap-2 p-2 w-full cursor-pointer rounded-md ${
-                  isProfileModalOpen ? "bg-amber-200" : "hover:bg-amber-200"
+                  isSettingsModalOpen ? "bg-amber-200" : "hover:bg-amber-200"
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -578,19 +582,18 @@ const Sidebar = ({ onSelectAnalysis }) => {
                 </div>
               </button>
 
-              {isProfileModalOpen && (
+              {isSettingsModalOpen && (
                 <div
                   ref={modalRef}
                   className="absolute w-full right-0 bottom-full mb-4 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-500"
                 >
-                  <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                    Profile
-                  </div>
+                  <Link to="/settings/profile">
+                    <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
+                      Settings
+                    </div>
+                  </Link>
                   {/*Divider*/}
                   <div className="h-px bg-black my-1"></div>
-                  <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                    Settings
-                  </div>
                   <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1 text-red-600">
                     Logout
                   </div>

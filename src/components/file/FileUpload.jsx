@@ -137,14 +137,14 @@ const FileUpload = ({ onFilesUpload, onFileRemove }) => {
                 : "Click to upload or drag and drop"}
             </p>
             <p className="text-xs text-gray-500">
-              PDF, Word, TXT, CSV, Excel files up to 10MB
+              PDF, Word, TXT, CSV, Excel, Powerpoint files up to 10MB
             </p>
           </div>
         </div>
 
         {/* Supported file types indicator */}
         <div className="mt-4 flex justify-center space-x-4">
-          {["PDF", "DOC", "TXT", "CSV", "XLS"].map((type) => (
+          {["PDF", "DOCX", "TXT", "CSV", "XLSX", "PPTX"].map((type) => (
             <span
               key={type}
               className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded"
