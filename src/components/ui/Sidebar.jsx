@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  Plus,
+  Star,
+  Clock,
+  Settings,
+  User,
+  ChevronRight,
+  ChevronLeft,
+  MoreHorizontal,
+  Edit3,
+  Trash2,
+  LogOut,
+  FileText,
+  Search,
+  Bookmark,
+} from "lucide-react";
 import SavedAnalysesModal from "../modals/SavedAnalysesModal";
-import { Link } from "react-router-dom";
 
 // Import or define your dummy data here
 const dummyChats = [
@@ -86,6 +101,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
   const [editingName, setEditingName] = useState("");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const modalRef = useRef(null);
 
   const handleStartNewChat = () => {
@@ -96,7 +112,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
       // Create a new chat
       const newChat = {
         id: Date.now(), // Simple ID generation
-        name: `Chat ${chats.length + 1}`,
+        name: `New Analysis`,
         isEmpty: true,
         isStarred: false,
       };
@@ -184,419 +200,267 @@ const Sidebar = ({ onSelectAnalysis }) => {
     };
   }, [openChatOptionId, isSettingsModalOpen]);
 
+  // Filter chats based on search
+  const filteredChats = chats.filter((chat) =>
+    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   // Separate starred and regular chats
-  const starredChats = chats.filter((chat) => chat.isStarred);
-  const regularChats = chats.filter((chat) => !chat.isStarred);
+  const starredChats = filteredChats.filter((chat) => chat.isStarred);
+  const regularChats = filteredChats.filter((chat) => !chat.isStarred);
 
   return (
     <div
-      className={`bg-amber-50 h-screen flex flex-col transition-all duration-300 ${
-        isMinimized ? "w-16" : "w-1/5"
+      className={`bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300 ${
+        isMinimized ? "w-16" : "w-80"
       }`}
     >
       {isMinimized ? (
         // Minimized Sidebar
-        <div className="flex flex-col h-full items-center py-4 gap-4">
+        <div className="flex flex-col h-full items-center py-4 gap-3">
           {/* Toggle Button */}
           <button
             onClick={handleToggleSidebar}
-            className="w-10 h-10 bg-amber-200 mt-1 rounded-full flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer"
+            className="w-10 h-10 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center transition-colors group"
           >
-            {/* Minimized Sidebar Toggle Button */}
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
+            <ChevronRight className="w-5 h-5 text-blue-600" />
           </button>
 
           {/* Start New Chat Icon */}
-          <button className="w-10 h-10 bg-amber-200 rounded-lg flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+          <button
+            onClick={handleStartNewChat}
+            className="w-10 h-10 bg-green-50 hover:bg-green-100 rounded-lg flex items-center justify-center transition-colors group"
+            title="New Analysis"
+          >
+            <Plus className="w-5 h-5 text-green-600" />
           </button>
 
           {/* Starred Icon */}
-          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center transition-all duration-500 cursor-pointer">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-              />
-            </svg>
-          </div>
+          <button
+            className="w-10 h-10 bg-yellow-50 hover:bg-yellow-100 rounded-lg flex items-center justify-center transition-colors"
+            title="Starred"
+          >
+            <Star className="w-5 h-5 text-yellow-600" />
+          </button>
 
           {/* Recent Icon */}
-          <div className="w-10 h-10 bg-amber-200 hover:bg-amber-300 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-500">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+          <button
+            className="w-10 h-10 bg-purple-50 hover:bg-purple-100 rounded-lg flex items-center justify-center transition-colors"
+            title="Recent"
+          >
+            <Clock className="w-5 h-5 text-purple-600" />
+          </button>
+
+          {/* Saved Analyses */}
+          <button
+            onClick={() => setIsSavedAnalysesOpen(true)}
+            className="w-10 h-10 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors"
+            title="Saved Analyses"
+          >
+            <Bookmark className="w-5 h-5 text-indigo-600" />
+          </button>
 
           {/* Spacer */}
           <div className="flex-1"></div>
 
           {/* Settings Icon */}
-          <button
-            onClick={handleToggleSettingsModal}
-            className="w-10 h-10 bg-amber-300 rounded-full flex items-center justify-center hover:bg-amber-400 transition-all duration-500 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-gray-600"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          <div className="relative">
+            <button
+              onClick={handleToggleSettingsModal}
+              className="w-10 h-10 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors"
+              title="Account"
             >
-              <path
-                fillRule="evenodd"
-                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
+              <User className="w-5 h-5 text-gray-600" />
+            </button>
 
-          {/* Settings Modal for Minimized View */}
-          {isSettingsModalOpen && (
-            <div
-              ref={modalRef}
-              className="absolute right-2 bottom-16 w-40 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-500"
-            >
-              <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                Settings
+            {/* Settings Modal for Minimized View */}
+            {isSettingsModalOpen && (
+              <div
+                ref={modalRef}
+                className="absolute left-full ml-2 bottom-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+              >
+                <Link to="/settings/profile">
+                  <div className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors">
+                    <Settings className="w-4 h-4 text-gray-500" />
+                    Settings
+                  </div>
+                </Link>
+                <div className="border-t border-gray-100 my-1"></div>
+                <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
               </div>
-              <div className="h-px bg-amber-200 my-1"></div>
-              <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                Settings
-              </div>
-              <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1 text-red-600">
-                Logout
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         // Expanded Sidebar
         <>
-          {/* Fixed Header */}
-          <div className="flex flex-col gap-4 px-2 py-4 flex-shrink-0">
-            <div className="flex items-center gap-2">
+          {/* Header */}
+          <div className="flex flex-col p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 cursor-pointer">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-gray-900">
+                  DocAnalyzer
+                </span>
+              </div>
               <button
                 onClick={handleToggleSidebar}
-                className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center hover:bg-amber-300 transition-all duration-500 cursor-pointer"
+                className="w-8 h-8 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
               </button>
-              <Link to="/dashboard">
-                <div className="text-2xl flex items-center underline font-bold h-14 cursor-pointer">
-                  DocAnalyzer
-                </div>
-              </Link>
             </div>
-            <div className="flex flex-col gap-2">
-              {/* Start a new chat */}
-              <button
-                onClick={handleStartNewChat}
-                className="flex items-center gap-2 cursor-pointer hover:bg-amber-100 rounded-lg p-2"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                <div className="text-lg font-medium">Start a new chat</div>
-              </button>
+
+            {/* New Analysis Button */}
+            <button
+              onClick={handleStartNewChat}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              New Analysis
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search analyses..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
             </div>
           </div>
 
-          {/* Scrollable Content */}
+          {/* Navigation */}
           <div className="flex-1 overflow-hidden">
-            <div className="flex flex-col gap-4 h-full">
-              {/* Starred */}
-              <div className="flex flex-col gap-2 px-2">
-                <div className="text-md underline font-semibold">Starred</div>
-                {/* Starred chats - scrollable after 3 items */}
-                <div className="flex flex-col gap-2 max-h-32 overflow-y-auto">
-                  {starredChats.length > 0 ? (
-                    starredChats.map((chat) => (
-                      <div
-                        key={chat.id}
-                        className={`text-md font-medium rounded-md px-1 py-1 cursor-pointer relative ${
-                          openChatOptionId !== chat.id
-                            ? "hover:bg-amber-200"
-                            : ""
-                        } ${chat.isEmpty ? "text-gray-500 italic" : ""}`}
-                      >
-                        <div className="flex items-center gap-2 justify-between">
-                          {editingChatId === chat.id ? (
-                            <input
-                              type="text"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              onBlur={() => handleSaveRename(chat.id)}
-                              onKeyDown={(e) =>
-                                handleRenameKeyPress(e, chat.id)
-                              }
-                              className="flex-1 text-md font-medium bg-white border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              autoFocus
-                            />
-                          ) : (
-                            <div className="flex-1 text-md font-medium">
-                              {chat.name} {chat.isEmpty && "(empty)"}
-                            </div>
-                          )}
-                          {editingChatId !== chat.id && (
-                            <button
-                              onClick={() => handleToggleChatOptions(chat.id)}
-                              className={`text-md font-medium rounded-md px-1 py-1 cursor-pointer ${
-                                openChatOptionId === chat.id
-                                  ? "bg-amber-200"
-                                  : ""
-                              }`}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-black hover:text-gray-500 cursor-pointer"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                              </svg>
-                            </button>
-                          )}
-                          {openChatOptionId === chat.id && (
-                            <div
-                              ref={modalRef}
-                              className="absolute w-30 right-0 top-full mt-1 bg-white rounded-md shadow-lg py-1 z-100 border border-gray-500"
-                            >
-                              <div
-                                onClick={() => handleStarChat(chat.id)}
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1"
-                              >
-                                Unstar
-                              </div>
-                              {/*Divider*/}
-                              <div className="h-px bg-amber-200 my-1"></div>
-                              <div
-                                onClick={() =>
-                                  handleStartRename(chat.id, chat.name)
-                                }
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1"
-                              >
-                                Rename
-                              </div>
-                              <div
-                                onClick={() => handleDeleteChat(chat.id)}
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1 text-red-600"
-                              >
-                                Delete
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-gray-500 text-sm italic px-1">
-                      No starred chats
-                    </div>
-                  )}
+            <div className="h-full overflow-y-auto">
+              {/* Quick Actions */}
+              <div className="p-4 border-b border-gray-200">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setIsSavedAnalysesOpen(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    Saved
+                  </button>
+                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors">
+                    <Clock className="w-4 h-4" />
+                    Recent
+                  </button>
                 </div>
               </div>
 
-              {/* Chat History */}
-              <div className="flex flex-col flex-1 border-t min-h-0">
-                <div className="flex flex-col h-full pl-2">
-                  {/* Recents */}
-                  <div className="text-md underline font-semibold py-2 flex-shrink-0">
-                    Recents
+              {/* Starred Analyses */}
+              {starredChats.length > 0 && (
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      Starred
+                    </h3>
                   </div>
-                  {/* Recent chats - scrollable */}
-                  <div className="flex flex-col gap-2 flex-1 overflow-y-auto min-h-0 pr-2">
-                    {/* Show user-created chats and dummy chats */}
-                    {regularChats.map((chat) => (
-                      <div
+                  <div className="space-y-1">
+                    {starredChats.slice(0, 5).map((chat) => (
+                      <ChatItem
                         key={chat.id}
-                        className={`text-md font-medium rounded-md px-1 py-1 cursor-pointer relative ${
-                          openChatOptionId !== chat.id
-                            ? "hover:bg-amber-200"
-                            : ""
-                        } ${chat.isEmpty ? "text-gray-500 italic" : ""}`}
-                      >
-                        <div className="flex items-center gap-2 justify-between">
-                          {editingChatId === chat.id ? (
-                            <input
-                              type="text"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              onBlur={() => handleSaveRename(chat.id)}
-                              onKeyDown={(e) =>
-                                handleRenameKeyPress(e, chat.id)
-                              }
-                              className="flex-1 text-md font-medium bg-white border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              autoFocus
-                            />
-                          ) : (
-                            <div className="flex-1 text-md font-medium">
-                              {chat.name} {chat.isEmpty && "New Chat"}
-                            </div>
-                          )}
-                          {editingChatId !== chat.id && (
-                            <button
-                              onClick={() => handleToggleChatOptions(chat.id)}
-                              className={`text-md font-medium rounded-md px-1 py-1 cursor-pointer ${
-                                openChatOptionId === chat.id
-                                  ? "bg-amber-200"
-                                  : ""
-                              }`}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-black hover:text-gray-500 cursor-pointer"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                              </svg>
-                            </button>
-                          )}
-                          {openChatOptionId === chat.id && (
-                            <div
-                              ref={modalRef}
-                              className="absolute w-30 right-0 top-full mt-1 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-500"
-                            >
-                              <div
-                                onClick={() => handleStarChat(chat.id)}
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1"
-                              >
-                                {chat.isStarred ? "Unstar" : "Star"}
-                              </div>
-                              {/*Divider*/}
-                              <div className="h-px bg-black my-1"></div>
-                              <div
-                                onClick={() =>
-                                  handleStartRename(chat.id, chat.name)
-                                }
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1"
-                              >
-                                Rename
-                              </div>
-                              <div
-                                onClick={() => handleDeleteChat(chat.id)}
-                                className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1 text-red-600"
-                              >
-                                Delete
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        chat={chat}
+                        isEditing={editingChatId === chat.id}
+                        editingName={editingName}
+                        onEdit={handleStartRename}
+                        onSave={handleSaveRename}
+                        onCancel={handleCancelRename}
+                        onKeyPress={handleRenameKeyPress}
+                        onToggleOptions={handleToggleChatOptions}
+                        onStar={handleStarChat}
+                        onDelete={handleDeleteChat}
+                        openOptionsId={openChatOptionId}
+                        modalRef={modalRef}
+                        setEditingName={setEditingName}
+                      />
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Recent Analyses */}
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Recent
+                  </h3>
+                </div>
+                <div className="space-y-1">
+                  {regularChats.map((chat) => (
+                    <ChatItem
+                      key={chat.id}
+                      chat={chat}
+                      isEditing={editingChatId === chat.id}
+                      editingName={editingName}
+                      onEdit={handleStartRename}
+                      onSave={handleSaveRename}
+                      onCancel={handleCancelRename}
+                      onKeyPress={handleRenameKeyPress}
+                      onToggleOptions={handleToggleChatOptions}
+                      onStar={handleStarChat}
+                      onDelete={handleDeleteChat}
+                      openOptionsId={openChatOptionId}
+                      modalRef={modalRef}
+                      setEditingName={setEditingName}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Fixed Settings Section */}
-          <div className="flex-shrink-0 p-2 border-t">
-            {/* Settings */}
+          {/* User Profile */}
+          <div className="p-4 border-t border-gray-200">
             <div className="relative">
               <button
                 onClick={handleToggleSettingsModal}
-                className={`flex flex-col gap-2 p-2 w-full cursor-pointer rounded-md ${
-                  isSettingsModalOpen ? "bg-amber-200" : "hover:bg-amber-200"
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  isSettingsModalOpen ? "bg-gray-100" : "hover:bg-gray-50"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-amber-300 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-gray-600"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-gray-700">User Name</span>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
                 </div>
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-medium text-gray-900">
+                    John Doe
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    john.doe@company.com
+                  </div>
+                </div>
+                <MoreHorizontal className="w-4 h-4 text-gray-400" />
               </button>
 
               {isSettingsModalOpen && (
                 <div
                   ref={modalRef}
-                  className="absolute w-full right-0 bottom-full mb-4 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-500"
+                  className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
                 >
-                  <Link to="/settings/profile">
-                    <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1">
-                      Settings
-                    </div>
-                  </Link>
-                  {/*Divider*/}
-                  <div className="h-px bg-black my-1"></div>
-                  <div className="text-md hover:bg-amber-200 rounded-sm cursor-pointer px-2 py-1 text-red-600">
-                    Logout
+                  <div className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer">
+                    <Settings className="w-4 h-4 text-gray-500" />
+                    Settings
                   </div>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
                 </div>
               )}
             </div>
@@ -609,6 +473,98 @@ const Sidebar = ({ onSelectAnalysis }) => {
         onClose={() => setIsSavedAnalysesOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
       />
+    </div>
+  );
+};
+
+// Chat Item Component
+const ChatItem = ({
+  chat,
+  isEditing,
+  editingName,
+  onEdit,
+  onSave,
+  onCancel,
+  onKeyPress,
+  onToggleOptions,
+  onStar,
+  onDelete,
+  openOptionsId,
+  modalRef,
+  setEditingName,
+}) => {
+  return (
+    <div className="group relative">
+      <div
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+          openOptionsId === chat.id ? "bg-gray-100" : "hover:bg-gray-50"
+        }`}
+      >
+        {isEditing ? (
+          <input
+            type="text"
+            value={editingName}
+            onChange={(e) => setEditingName(e.target.value)}
+            onBlur={() => onSave(chat.id)}
+            onKeyDown={(e) => onKeyPress(e, chat.id)}
+            className="flex-1 text-sm bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+          />
+        ) : (
+          <>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                {chat.name}
+              </div>
+              {chat.isEmpty && (
+                <div className="text-xs text-gray-500">New analysis</div>
+              )}
+            </div>
+            <button
+              onClick={() => onToggleOptions(chat.id)}
+              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded hover:bg-gray-200 flex items-center justify-center transition-all"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-400" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {openOptionsId === chat.id && !isEditing && (
+        <div
+          ref={modalRef}
+          className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+        >
+          <button
+            onClick={() => onStar(chat.id)}
+            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+          >
+            <Star
+              className={`w-4 h-4 ${
+                chat.isStarred
+                  ? "text-yellow-500 fill-current"
+                  : "text-gray-400"
+              }`}
+            />
+            {chat.isStarred ? "Unstar" : "Star"}
+          </button>
+          <button
+            onClick={() => onEdit(chat.id, chat.name)}
+            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+          >
+            <Edit3 className="w-4 h-4 text-gray-400" />
+            Rename
+          </button>
+          <div className="border-t border-gray-100 my-1"></div>
+          <button
+            onClick={() => onDelete(chat.id)}
+            className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 };

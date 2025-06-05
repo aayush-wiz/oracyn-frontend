@@ -1,9 +1,29 @@
-import { useState } from 'react';
-import Modal from './Modal';
+import { useState } from "react";
+import {
+  Search,
+  Filter,
+  Star,
+  FileText,
+  Download,
+  Eye,
+  MoreHorizontal,
+  X,
+  Calendar,
+  Tag,
+  Bookmark,
+  TrendingUp,
+  Database,
+  BarChart3,
+  Clock,
+  Archive,
+  Trash2,
+} from "lucide-react";
 
 const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all'); // all, summary, extraction, comparison
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [sortBy, setSortBy] = useState("recent");
+  const [viewMode, setViewMode] = useState("grid"); // grid or list
 
   // Mock data - replace with actual saved analyses from your state/API
   const [savedAnalyses] = useState([
@@ -14,8 +34,13 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
       query: "Summarize the main financial insights from Q4 report",
       documents: ["Q4-report.pdf", "budget-analysis.xlsx"],
       createdAt: "2024-01-15 10:30 AM",
+      updatedAt: "2024-01-15 10:30 AM",
       tags: ["financial", "quarterly"],
-      preview: "The Q4 financial report shows a 15% increase in revenue compared to the previous quarter..."
+      preview:
+        "The Q4 financial report shows a 15% increase in revenue compared to the previous quarter...",
+      starred: true,
+      size: "2.4 MB",
+      queries: 24,
     },
     {
       id: 2,
@@ -24,8 +49,13 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
       query: "Extract all key terms and conditions from the contract",
       documents: ["service-contract.pdf"],
       createdAt: "2024-01-14 04:20 PM",
+      updatedAt: "2024-01-14 04:20 PM",
       tags: ["legal", "contract"],
-      preview: "Key terms identified: Payment terms - Net 30 days, Service level agreement - 99.9% uptime..."
+      preview:
+        "Key terms identified: Payment terms - Net 30 days, Service level agreement - 99.9% uptime...",
+      starred: false,
+      size: "1.2 MB",
+      queries: 8,
     },
     {
       id: 3,
@@ -34,8 +64,13 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
       query: "Compare features and pricing across all product documents",
       documents: ["product-a.pdf", "product-b.pdf", "pricing-sheet.xlsx"],
       createdAt: "2024-01-13 11:30 AM",
+      updatedAt: "2024-01-13 11:30 AM",
       tags: ["product", "comparison", "pricing"],
-      preview: "Comparison analysis reveals that Product A offers better value for enterprise customers..."
+      preview:
+        "Comparison analysis reveals that Product A offers better value for enterprise customers...",
+      starred: true,
+      size: "3.8 MB",
+      queries: 15,
     },
     {
       id: 4,
@@ -44,18 +79,69 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
       query: "Find all regulatory compliance requirements",
       documents: ["compliance-doc.pdf", "regulations.pdf"],
       createdAt: "2024-01-12 02:15 PM",
+      updatedAt: "2024-01-12 02:15 PM",
       tags: ["compliance", "regulatory"],
-      preview: "Identified 12 compliance requirements including GDPR, SOX, and industry-specific regulations..."
-    }
+      preview:
+        "Identified 12 compliance requirements including GDPR, SOX, and industry-specific regulations...",
+      starred: false,
+      size: "1.8 MB",
+      queries: 12,
+    },
+    {
+      id: 5,
+      title: "Market Research Analysis",
+      type: "summary",
+      query: "Analyze market trends and customer sentiment",
+      documents: ["market-report.pdf", "survey-data.csv"],
+      createdAt: "2024-01-11 09:45 AM",
+      updatedAt: "2024-01-11 09:45 AM",
+      tags: ["market", "research", "trends"],
+      preview:
+        "Market analysis shows growing demand for sustainable products with 67% consumer preference...",
+      starred: false,
+      size: "4.2 MB",
+      queries: 31,
+    },
+    {
+      id: 6,
+      title: "Technical Documentation Review",
+      type: "extraction",
+      query: "Extract technical specifications and requirements",
+      documents: ["tech-specs.pdf", "requirements.docx"],
+      createdAt: "2024-01-10 03:20 PM",
+      updatedAt: "2024-01-10 03:20 PM",
+      tags: ["technical", "documentation"],
+      preview:
+        "Technical specifications include API endpoints, database schema, and performance metrics...",
+      starred: true,
+      size: "2.1 MB",
+      queries: 19,
+    },
   ]);
 
-  const filteredAnalyses = savedAnalyses.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.query.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesFilter = filterType === 'all' || item.type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredAnalyses = savedAnalyses
+    .filter((item) => {
+      const matchesSearch =
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.query.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.tags.some((tag) =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      const matchesFilter = filterType === "all" || item.type === filterType;
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "recent":
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "queries":
+          return b.queries - a.queries;
+        default:
+          return 0;
+      }
+    });
 
   const handleSelectAnalysis = (analysis) => {
     onSelectAnalysis(analysis);
@@ -63,185 +149,385 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
   };
 
   const getTypeIcon = (type) => {
-    const iconClass = "w-4 h-4";
+    const iconClass = "w-5 h-5";
     switch (type) {
-      case 'summary':
-        return (
-          <svg className={`${iconClass} text-blue-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        );
-      case 'extraction':
-        return (
-          <svg className={`${iconClass} text-green-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-        );
-      case 'comparison':
-        return (
-          <svg className={`${iconClass} text-purple-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        );
+      case "summary":
+        return <FileText className={`${iconClass} text-blue-500`} />;
+      case "extraction":
+        return <Database className={`${iconClass} text-green-500`} />;
+      case "comparison":
+        return <BarChart3 className={`${iconClass} text-purple-500`} />;
       default:
-        return (
-          <svg className={`${iconClass} text-gray-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        );
+        return <FileText className={`${iconClass} text-gray-500`} />;
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Saved Analyses" size="xl">
-      <div className="space-y-4">
-        {/* Search and Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search saved analyses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          >
-            <option value="all">All Types</option>
-            <option value="summary">Summary</option>
-            <option value="extraction">Extraction</option>
-            <option value="comparison">Comparison</option>
-          </select>
-        </div>
+  const getTypeColor = (type) => {
+    switch (type) {
+      case "summary":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      case "extraction":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "comparison":
+        return "bg-purple-50 text-purple-700 border-purple-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
 
-        {/* Stats */}
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>{filteredAnalyses.length} analyses found</span>
-          <button 
-            onClick={() => {
-              setSearchTerm('');
-              setFilterType('all');
-            }}
-            className="text-blue-600 hover:text-blue-700 font-medium"
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Bookmark className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Saved Analyses
+              </h2>
+              <p className="text-gray-600">
+                Manage and access your saved document analyses
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
           >
-            Clear filters
+            <X className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
-        {/* Analyses Grid */}
-        <div className="max-h-96 overflow-y-auto">
-          {filteredAnalyses.length > 0 ? (
-            <div className="grid gap-4">
-              {filteredAnalyses.map((item) => (
-                <div
-                  key={item.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => handleSelectAnalysis(item)}
+        {/* Filters and Search */}
+        <div className="p-6 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search analyses, queries, or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-3">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32"
+              >
+                <option value="all">All Types</option>
+                <option value="summary">Summary</option>
+                <option value="extraction">Extraction</option>
+                <option value="comparison">Comparison</option>
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32"
+              >
+                <option value="recent">Most Recent</option>
+                <option value="title">Title A-Z</option>
+                <option value="queries">Most Queried</option>
+              </select>
+
+              <div className="flex bg-gray-200 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    viewMode === "grid"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600"
+                  }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      {getTypeIcon(item.type)}
-                      <div>
-                        <h3 className="font-medium text-gray-900">{item.title}</h3>
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                          {item.type}
-                        </span>
+                  Grid
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    viewMode === "list"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600"
+                  }`}
+                >
+                  List
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <span>{filteredAnalyses.length} analyses found</span>
+              <span>•</span>
+              <span>
+                {savedAnalyses.filter((a) => a.starred).length} starred
+              </span>
+              <span>•</span>
+              <span>
+                {savedAnalyses.reduce((sum, a) => sum + a.queries, 0)} total
+                queries
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setFilterType("all");
+                setSortBy("recent");
+              }}
+              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+            >
+              Clear all filters
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          {filteredAnalyses.length > 0 ? (
+            <div className="h-full overflow-y-auto p-6">
+              {viewMode === "grid" ? (
+                // Grid View
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredAnalyses.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer group"
+                      onClick={() => handleSelectAnalysis(item)}
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          {getTypeIcon(item.type)}
+                          <div>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getTypeColor(
+                                item.type
+                              )}`}
+                            >
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {item.starred && (
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("More options for:", item.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded transition-all"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Title and Preview */}
+                      <div className="mb-4">
+                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                          {item.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 line-clamp-3">
+                          {item.preview}
+                        </p>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {item.tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                          >
+                            <Tag className="w-3 h-3" />
+                            {tag}
+                          </span>
+                        ))}
+                        {item.tags.length > 3 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                            +{item.tags.length - 3} more
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span>{item.queries} queries</span>
+                          <span>{item.documents.length} docs</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log('Export analysis:', item.id);
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Export"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectAnalysis(item);
-                        }}
-                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      >
-                        View
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.preview}</p>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center space-x-4">
-                      <span>{item.createdAt}</span>
-                      <span>•</span>
-                      <span>{item.documents.length} document{item.documents.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="flex space-x-1">
-                      {item.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                // List View
+                <div className="space-y-3">
+                  {filteredAnalyses.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group"
+                      onClick={() => handleSelectAnalysis(item)}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Icon and Type */}
+                        <div className="flex items-center gap-3">
+                          {getTypeIcon(item.type)}
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getTypeColor(
+                              item.type
+                            )}`}
+                          >
+                            {item.type}
+                          </span>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-gray-900 truncate">
+                              {item.title}
+                            </h3>
+                            {item.starred && (
+                              <Star className="w-4 h-4 text-yellow-500 fill-current flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-1">
+                            {item.preview}
+                          </p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
+                            <span>{item.queries} queries</span>
+                            <span>{item.documents.length} documents</span>
+                            <span>{item.size}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("View analysis:", item.id);
+                            }}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Download analysis:", item.id);
+                            }}
+                            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("More options for:", item.id);
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <svg className="mx-auto w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <p className="text-gray-500">No saved analyses found matching your criteria.</p>
+            // Empty State
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No analyses found
+                </h3>
+                <p className="text-gray-600 mb-6 max-w-md">
+                  No saved analyses match your current filters. Try adjusting
+                  your search criteria or clear all filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilterType("all");
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Close
-          </button>
-          <div className="flex space-x-2">
+        {/* Footer */}
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span>Total storage: 14.5 GB</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>Last updated: 2 hours ago</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                console.log('Export all analyses');
-              }}
-              className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+              onClick={() => console.log("Archive selected")}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
             >
+              <Archive className="w-4 h-4" />
+              Archive All
+            </button>
+            <button
+              onClick={() => console.log("Export all")}
+              className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+            >
+              <Download className="w-4 h-4" />
               Export All
             </button>
             <button
-              onClick={() => {
-                console.log('Delete selected analyses');
-              }}
-              className="px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
             >
-              Clear All
+              Close
             </button>
           </div>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
-export default SavedAnalysesModal; 
+export default SavedAnalysesModal;
