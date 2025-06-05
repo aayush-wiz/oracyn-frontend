@@ -7,17 +7,17 @@ import {
   User,
   ChevronRight,
   ChevronLeft,
-  MoreHorizontal,
-  Edit3,
-  Trash2,
   LogOut,
   FileText,
   Search,
   Bookmark,
 } from "lucide-react";
 import SavedAnalysesModal from "../modals/SavedAnalysesModal";
+import { Link } from "react-router-dom";
+import ChatItem from "../interactive/ChatItem.jsx";
+import AllChatsModal from "../modals/AllChatModal.jsx";
+import StarredChatsModal from "../modals/StarredChatModal.jsx";
 
-// Import or define your dummy data here
 const dummyChats = [
   {
     id: 1735574400000,
@@ -96,43 +96,34 @@ const dummyChats = [
 const Sidebar = ({ onSelectAnalysis }) => {
   const [chats, setChats] = useState(dummyChats);
   const [isSavedAnalysesOpen, setIsSavedAnalysesOpen] = useState(false);
+  const [isStarredModalOpen, setIsStarredModalOpen] = useState(false);
+  const [isAllChatsModalOpen, setIsAllChatsModalOpen] = useState(false);
   const [openChatOptionId, setOpenChatOptionId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const modalRef = useRef(null);
+
+  // Refs for modal management
+  const sidebarScrollRef = useRef(null);
+  const settingsButtonRef = useRef(null);
 
   const handleStartNewChat = () => {
-    // Check if there's already an empty chat
     const hasEmptyChat = chats.some((chat) => chat.isEmpty);
-
     if (!hasEmptyChat) {
-      // Create a new chat
       const newChat = {
-        id: Date.now(), // Simple ID generation
+        id: Date.now(),
         name: `New Analysis`,
         isEmpty: true,
         isStarred: false,
       };
-      setChats([newChat, ...chats]); // Add to beginning of array
+      setChats([newChat, ...chats]);
     }
-  };
-
-  const handleToggleChatOptions = (chatId) => {
-    setOpenChatOptionId(openChatOptionId === chatId ? null : chatId);
-    setIsSettingsModalOpen(false); // Close Settings modal when opening chat options
-  };
-
-  const handleToggleSettingsModal = () => {
-    setIsSettingsModalOpen((prev) => !prev);
-    setOpenChatOptionId(null); // Close chat options when opening Settings modal
   };
 
   const handleToggleSidebar = () => {
     setIsMinimized(!isMinimized);
-    // Close any open modals when toggling
     setOpenChatOptionId(null);
     setIsSettingsModalOpen(false);
   };
@@ -182,102 +173,146 @@ const Sidebar = ({ onSelectAnalysis }) => {
     }
   };
 
-  // Close modal when clicking outside
+  // Disable sidebar scroll when modals are open
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        setOpenChatOptionId(null);
-        setIsSettingsModalOpen(false);
+    if (sidebarScrollRef.current) {
+      if (openChatOptionId || isSettingsModalOpen) {
+        sidebarScrollRef.current.style.overflowY = "hidden";
+      } else {
+        sidebarScrollRef.current.style.overflowY = "auto";
+      }
+    }
+  }, [openChatOptionId, isSettingsModalOpen]);
+
+  // Global click handler to close modals
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      // Close chat options if clicking outside
+      if (openChatOptionId) {
+        const chatModal = document.querySelector(
+          `[data-chat-modal="${openChatOptionId}"]`
+        );
+        const chatButton = document.querySelector(
+          `[data-chat-button="${openChatOptionId}"]`
+        );
+
+        if (
+          chatModal &&
+          !chatModal.contains(e.target) &&
+          chatButton &&
+          !chatButton.contains(e.target)
+        ) {
+          setOpenChatOptionId(null);
+        }
+      }
+
+      // Close settings modal if clicking outside
+      if (isSettingsModalOpen) {
+        const settingsModal = document.querySelector("[data-settings-modal]");
+
+        if (
+          settingsModal &&
+          !settingsModal.contains(e.target) &&
+          settingsButtonRef.current &&
+          !settingsButtonRef.current.contains(e.target)
+        ) {
+          setIsSettingsModalOpen(false);
+        }
       }
     };
 
-    if (openChatOptionId || isSettingsModalOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    document.addEventListener("mousedown", handleGlobalClick);
+    return () => document.removeEventListener("mousedown", handleGlobalClick);
   }, [openChatOptionId, isSettingsModalOpen]);
 
-  // Filter chats based on search
+  // Filter chats
   const filteredChats = chats.filter((chat) =>
     chat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Separate starred and regular chats
   const starredChats = filteredChats.filter((chat) => chat.isStarred);
   const regularChats = filteredChats.filter((chat) => !chat.isStarred);
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300 ${
+      className={`bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-400 ${
         isMinimized ? "w-16" : "w-80"
       }`}
     >
       {isMinimized ? (
         // Minimized Sidebar
         <div className="flex flex-col h-full items-center py-4 gap-3">
-          {/* Toggle Button */}
           <button
             onClick={handleToggleSidebar}
-            className="w-10 h-10 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center transition-colors group"
+            className="relative w-10 h-10 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
           >
             <ChevronRight className="w-5 h-5 text-blue-600" />
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+              Expand
+            </div>
           </button>
 
-          {/* Start New Chat Icon */}
           <button
             onClick={handleStartNewChat}
-            className="w-10 h-10 bg-green-50 hover:bg-green-100 rounded-lg flex items-center justify-center transition-colors group"
-            title="New Analysis"
+            className="relative w-10 h-10 bg-green-50 hover:bg-green-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
           >
             <Plus className="w-5 h-5 text-green-600" />
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+              Start New Chat
+            </div>
           </button>
 
-          {/* Starred Icon */}
           <button
-            className="w-10 h-10 bg-yellow-50 hover:bg-yellow-100 rounded-lg flex items-center justify-center transition-colors"
-            title="Starred"
+            onClick={() => setIsStarredModalOpen(true)}
+            className="relative w-10 h-10 bg-yellow-50 hover:bg-yellow-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
           >
             <Star className="w-5 h-5 text-yellow-600" />
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+              Starred Chats
+            </div>
           </button>
 
-          {/* Recent Icon */}
           <button
-            className="w-10 h-10 bg-purple-50 hover:bg-purple-100 rounded-lg flex items-center justify-center transition-colors"
-            title="Recent"
+            onClick={() => setIsAllChatsModalOpen(true)}
+            className="relative w-10 h-10 bg-purple-50 hover:bg-purple-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
           >
             <Clock className="w-5 h-5 text-purple-600" />
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+              Recent Chats
+            </div>
           </button>
 
-          {/* Saved Analyses */}
           <button
             onClick={() => setIsSavedAnalysesOpen(true)}
-            className="w-10 h-10 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors"
-            title="Saved Analyses"
+            className="relative w-10 h-10 bg-indigo-50 hover:bg-indigo-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
           >
             <Bookmark className="w-5 h-5 text-indigo-600" />
+            <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+              Saved Chats
+            </div>
           </button>
 
-          {/* Spacer */}
           <div className="flex-1"></div>
 
-          {/* Settings Icon */}
           <div className="relative">
             <button
-              onClick={handleToggleSettingsModal}
-              className="w-10 h-10 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors"
-              title="Account"
+              ref={settingsButtonRef}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSettingsModalOpen(!isSettingsModalOpen);
+                setOpenChatOptionId(null);
+              }}
+              className="relative w-10 h-10 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors group cursor-pointer"
             >
               <User className="w-5 h-5 text-gray-600" />
+              <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-1 bg-gray-700 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap z-50">
+                Settings
+              </div>
             </button>
 
-            {/* Settings Modal for Minimized View */}
             {isSettingsModalOpen && (
               <div
-                ref={modalRef}
-                className="absolute left-full ml-2 bottom-0 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                data-settings-modal
+                className="fixed left-16 bottom-4 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[9999]"
               >
                 <Link to="/settings/profile">
                   <div className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors">
@@ -286,7 +321,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
                   </div>
                 </Link>
                 <div className="border-t border-gray-100 my-1"></div>
-                <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer">
                   <LogOut className="w-4 h-4" />
                   Logout
                 </button>
@@ -300,13 +335,15 @@ const Sidebar = ({ onSelectAnalysis }) => {
           {/* Header */}
           <div className="flex flex-col p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 cursor-pointer">
+              <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">
-                  DocAnalyzer
-                </span>
+                <Link to="/dashboard">
+                  <span className="text-xl font-bold text-black cursor-pointer">
+                    DocAnalyzer
+                  </span>
+                </Link>
               </div>
               <button
                 onClick={handleToggleSidebar}
@@ -316,10 +353,9 @@ const Sidebar = ({ onSelectAnalysis }) => {
               </button>
             </div>
 
-            {/* New Analysis Button */}
             <button
               onClick={handleStartNewChat}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium cursor-pointer"
             >
               <Plus className="w-5 h-5" />
               New Analysis
@@ -342,18 +378,18 @@ const Sidebar = ({ onSelectAnalysis }) => {
 
           {/* Navigation */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto">
+            <div ref={sidebarScrollRef} className="h-full overflow-y-auto">
               {/* Quick Actions */}
               <div className="p-4 border-b border-gray-200">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setIsSavedAnalysesOpen(true)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors cursor-pointer"
                   >
                     <Bookmark className="w-4 h-4" />
                     Saved
                   </button>
-                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors">
+                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors cursor-pointer">
                     <Clock className="w-4 h-4" />
                     Recent
                   </button>
@@ -365,12 +401,12 @@ const Sidebar = ({ onSelectAnalysis }) => {
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    <h3 className="text-sm font-semibold text-gray-700">
+                    <h3 className="text-md font-500 text-gray-700 underline">
                       Starred
                     </h3>
                   </div>
                   <div className="space-y-1">
-                    {starredChats.slice(0, 5).map((chat) => (
+                    {starredChats.slice(0, 5).map((chat, index) => (
                       <ChatItem
                         key={chat.id}
                         chat={chat}
@@ -380,12 +416,12 @@ const Sidebar = ({ onSelectAnalysis }) => {
                         onSave={handleSaveRename}
                         onCancel={handleCancelRename}
                         onKeyPress={handleRenameKeyPress}
-                        onToggleOptions={handleToggleChatOptions}
                         onStar={handleStarChat}
                         onDelete={handleDeleteChat}
                         openOptionsId={openChatOptionId}
-                        modalRef={modalRef}
+                        setOpenOptionsId={setOpenChatOptionId}
                         setEditingName={setEditingName}
+                        isLast={index === starredChats.slice(0, 5).length - 1}
                       />
                     ))}
                   </div>
@@ -396,12 +432,12 @@ const Sidebar = ({ onSelectAnalysis }) => {
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-sm font-semibold text-gray-700">
+                  <h3 className="text-md font-medium text-gray-700 underline">
                     Recent
                   </h3>
                 </div>
                 <div className="space-y-1">
-                  {regularChats.map((chat) => (
+                  {regularChats.map((chat, index) => (
                     <ChatItem
                       key={chat.id}
                       chat={chat}
@@ -411,12 +447,12 @@ const Sidebar = ({ onSelectAnalysis }) => {
                       onSave={handleSaveRename}
                       onCancel={handleCancelRename}
                       onKeyPress={handleRenameKeyPress}
-                      onToggleOptions={handleToggleChatOptions}
                       onStar={handleStarChat}
                       onDelete={handleDeleteChat}
                       openOptionsId={openChatOptionId}
-                      modalRef={modalRef}
+                      setOpenOptionsId={setOpenChatOptionId}
                       setEditingName={setEditingName}
+                      isLast={index === regularChats.length - 1}
                     />
                   ))}
                 </div>
@@ -426,10 +462,15 @@ const Sidebar = ({ onSelectAnalysis }) => {
 
           {/* User Profile */}
           <div className="p-4 border-t border-gray-200">
-            <div className="relative">
+            <div className="relative ">
               <button
-                onClick={handleToggleSettingsModal}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                ref={settingsButtonRef}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsSettingsModalOpen(!isSettingsModalOpen);
+                  setOpenChatOptionId(null);
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
                   isSettingsModalOpen ? "bg-gray-100" : "hover:bg-gray-50"
                 }`}
               >
@@ -444,20 +485,21 @@ const Sidebar = ({ onSelectAnalysis }) => {
                     john.doe@company.com
                   </div>
                 </div>
-                <MoreHorizontal className="w-4 h-4 text-gray-400" />
               </button>
 
               {isSettingsModalOpen && (
                 <div
-                  ref={modalRef}
-                  className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                  data-settings-modal
+                  className="fixed bottom-16 left-4 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[9999]"
                 >
-                  <div className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer">
-                    <Settings className="w-4 h-4 text-gray-500" />
-                    Settings
-                  </div>
+                  <Link to="/settings/profile">
+                    <div className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer">
+                      <Settings className="w-4 h-4 text-gray-500" />
+                      Settings
+                    </div>
+                  </Link>
                   <div className="border-t border-gray-100 my-1"></div>
-                  <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                  <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer">
                     <LogOut className="w-4 h-4" />
                     Logout
                   </button>
@@ -473,98 +515,16 @@ const Sidebar = ({ onSelectAnalysis }) => {
         onClose={() => setIsSavedAnalysesOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
       />
-    </div>
-  );
-};
-
-// Chat Item Component
-const ChatItem = ({
-  chat,
-  isEditing,
-  editingName,
-  onEdit,
-  onSave,
-  onCancel,
-  onKeyPress,
-  onToggleOptions,
-  onStar,
-  onDelete,
-  openOptionsId,
-  modalRef,
-  setEditingName,
-}) => {
-  return (
-    <div className="group relative">
-      <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-          openOptionsId === chat.id ? "bg-gray-100" : "hover:bg-gray-50"
-        }`}
-      >
-        {isEditing ? (
-          <input
-            type="text"
-            value={editingName}
-            onChange={(e) => setEditingName(e.target.value)}
-            onBlur={() => onSave(chat.id)}
-            onKeyDown={(e) => onKeyPress(e, chat.id)}
-            className="flex-1 text-sm bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            autoFocus
-          />
-        ) : (
-          <>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
-                {chat.name}
-              </div>
-              {chat.isEmpty && (
-                <div className="text-xs text-gray-500">New analysis</div>
-              )}
-            </div>
-            <button
-              onClick={() => onToggleOptions(chat.id)}
-              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded hover:bg-gray-200 flex items-center justify-center transition-all"
-            >
-              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {openOptionsId === chat.id && !isEditing && (
-        <div
-          ref={modalRef}
-          className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
-        >
-          <button
-            onClick={() => onStar(chat.id)}
-            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
-          >
-            <Star
-              className={`w-4 h-4 ${
-                chat.isStarred
-                  ? "text-yellow-500 fill-current"
-                  : "text-gray-400"
-              }`}
-            />
-            {chat.isStarred ? "Unstar" : "Star"}
-          </button>
-          <button
-            onClick={() => onEdit(chat.id, chat.name)}
-            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
-          >
-            <Edit3 className="w-4 h-4 text-gray-400" />
-            Rename
-          </button>
-          <div className="border-t border-gray-100 my-1"></div>
-          <button
-            onClick={() => onDelete(chat.id)}
-            className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
-        </div>
-      )}
+      <AllChatsModal
+        isOpen={isAllChatsModalOpen}
+        onClose={() => setIsAllChatsModalOpen(false)}
+        onSelectAnalysis={onSelectAnalysis}
+      />
+      <StarredChatsModal
+        isOpen={isStarredModalOpen}
+        onClose={() => setIsStarredModalOpen(false)}
+        onSelectAnalysis={onSelectAnalysis}
+      />
     </div>
   );
 };

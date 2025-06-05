@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Search,
-  Filter,
   Star,
   FileText,
   Download,
@@ -16,7 +15,6 @@ import {
   BarChart3,
   Clock,
   Archive,
-  Trash2,
 } from "lucide-react";
 
 const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
