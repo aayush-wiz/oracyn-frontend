@@ -347,7 +347,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
               </div>
               <button
                 onClick={handleToggleSidebar}
-                className="w-8 h-8 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors"
+                className="w-8 h-8 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4 text-gray-600" />
               </button>

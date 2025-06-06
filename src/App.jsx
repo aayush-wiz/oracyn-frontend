@@ -9,7 +9,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import Dashboard from "./components/ui/Dashboard";
-import Settings from "./components/routes/Settings.jsx";
+import Settings from "./components/ui/Settings.jsx";
 import Profile from "./components/user/Profile.jsx";
 import Data from "./components/user/Data.jsx";
 import Security from "./components/user/Security.jsx";

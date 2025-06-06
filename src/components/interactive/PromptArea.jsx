@@ -11,7 +11,7 @@ import {
   Presentation,
   File,
 } from "lucide-react";
-import FileUpload from "../file/FileUpload";
+import FileUpload from "./FileUpload";
 
 const PromptArea = ({ onVisualize }) => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
