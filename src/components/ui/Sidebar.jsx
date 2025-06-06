@@ -389,7 +389,10 @@ const Sidebar = ({ onSelectAnalysis }) => {
                     <Bookmark className="w-4 h-4" />
                     Saved
                   </button>
-                  <button className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors cursor-pointer">
+                  <button
+                    onClick={() => setIsAllChatsModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition-colors cursor-pointer"
+                  >
                     <Clock className="w-4 h-4" />
                     Recent
                   </button>
@@ -405,8 +408,14 @@ const Sidebar = ({ onSelectAnalysis }) => {
                       Starred
                     </h3>
                   </div>
-                  <div className="space-y-1">
-                    {starredChats.slice(0, 5).map((chat, index) => (
+                  <div
+                    className={`space-y-1 ${
+                      starredChats.length > 3
+                        ? "max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                        : ""
+                    }`}
+                  >
+                    {starredChats.map((chat, index) => (
                       <ChatItem
                         key={chat.id}
                         chat={chat}
@@ -421,7 +430,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
                         openOptionsId={openChatOptionId}
                         setOpenOptionsId={setOpenChatOptionId}
                         setEditingName={setEditingName}
-                        isLast={index === starredChats.slice(0, 5).length - 1}
+                        isLast={index === starredChats.length - 1}
                       />
                     ))}
                   </div>

@@ -176,7 +176,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-50/75 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -193,12 +193,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
         </div>
 
         {/* Filters and Search */}
@@ -221,7 +215,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32 cursor-pointer"
               >
                 <option value="all">All Types</option>
                 <option value="summary">Summary</option>
@@ -232,7 +226,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-w-32 cursor-pointer"
               >
                 <option value="recent">Most Recent</option>
                 <option value="title">Title A-Z</option>
@@ -242,7 +236,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               <div className="flex bg-gray-200 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                  className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
                     viewMode === "grid"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600"
@@ -252,7 +246,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                  className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
                     viewMode === "list"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600"
@@ -284,7 +278,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                 setFilterType("all");
                 setSortBy("recent");
               }}
-              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+              className="text-indigo-600 hover:text-indigo-700 font-medium text-sm cursor-pointer"
             >
               Clear all filters
             </button>
@@ -503,21 +497,21 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => console.log("Archive selected")}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
             >
               <Archive className="w-4 h-4" />
               Archive All
             </button>
             <button
               onClick={() => console.log("Export all")}
-              className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Export All
             </button>
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors cursor-pointer"
             >
               Close
             </button>

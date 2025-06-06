@@ -4,7 +4,6 @@ import {
   Star,
   MessageSquare,
   MoreHorizontal,
-  X,
   Calendar,
   Tag,
   Share2,
@@ -140,7 +139,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-50/75 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -157,12 +156,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
         </div>
 
         {/* Filters and Search */}
@@ -183,7 +176,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none min-w-32"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none min-w-32 transition-all duration-300 cursor-pointer"
               >
                 <option value="recent">Most Recent</option>
                 <option value="title">Title A-Z</option>
@@ -193,7 +186,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               <div className="flex bg-gray-200 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                  className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
                     viewMode === "grid"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600"
@@ -203,7 +196,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                  className={`px-3 py-1 rounded text-sm transition-colors cursor-pointer ${
                     viewMode === "list"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600"
@@ -233,7 +226,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 setSearchTerm("");
                 setSortBy("recent");
               }}
-              className="text-yellow-600 hover:text-yellow-700 font-medium text-sm"
+              className="text-yellow-600 hover:text-yellow-700 font-medium text-sm cursor-pointer"
             >
               Clear filters
             </button>
@@ -394,7 +387,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
           </div>
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors cursor-pointer"
           >
             Close
           </button>
