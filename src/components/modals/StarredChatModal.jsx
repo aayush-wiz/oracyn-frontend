@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import {
   Search,
   Star,
@@ -7,89 +9,114 @@ import {
   Calendar,
   Tag,
   Share2,
+  Trash2,
+  X
 } from "lucide-react";
 
 const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
+  const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [viewMode, setViewMode] = useState("grid");
+  const [starredChats, setStarredChats] = useState([]);
+  const [error, setError] = useState(null);
+  const [openOptionsId, setOpenOptionsId] = useState(null);
+  const buttonRefs = useRef({});
 
-  // Mock data for starred chats
-  const [starredChats] = useState([
-    {
-      id: 1,
-      title: "Marketing Strategy Discussion",
-      lastMessage:
-        "Let's focus on the Q2 campaign objectives and target demographics...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-15 10:30 AM",
-      updatedAt: "2024-01-15 02:45 PM",
-      tags: ["marketing", "strategy", "Q2"],
-      messageCount: 45,
-      type: "conversation",
-      category: "Business",
-      isActive: false,
-      attachments: 3,
-    },
-    {
-      id: 2,
-      title: "Code Review - React Components",
-      lastMessage:
-        "The implementation looks good, but consider adding error boundaries...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-14 04:20 PM",
-      updatedAt: "2024-01-14 06:15 PM",
-      tags: ["coding", "react", "review"],
-      messageCount: 28,
-      type: "technical",
-      category: "Development",
-      isActive: true,
-      attachments: 8,
-    },
-    {
-      id: 3,
-      title: "Creative Writing Session",
-      lastMessage: "The character development in chapter 3 needs more depth...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-13 11:30 AM",
-      updatedAt: "2024-01-13 01:20 PM",
-      tags: ["writing", "creative", "fiction"],
-      messageCount: 67,
-      type: "creative",
-      category: "Creative",
-      isActive: false,
-      attachments: 2,
-    },
-    {
-      id: 4,
-      title: "Data Analysis Help",
-      lastMessage:
-        "The correlation between variables X and Y shows significant...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-12 02:15 PM",
-      updatedAt: "2024-01-12 04:30 PM",
-      tags: ["data", "analysis", "statistics"],
-      messageCount: 19,
-      type: "analytical",
-      category: "Data Science",
-      isActive: false,
-      attachments: 5,
-    },
-    {
-      id: 5,
-      title: "Language Learning Practice",
-      lastMessage: "Tu pronunciación está mejorando mucho. Practiquemos más...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-11 09:45 AM",
-      updatedAt: "2024-01-11 11:20 AM",
-      tags: ["language", "spanish", "learning"],
-      messageCount: 89,
-      type: "educational",
-      category: "Education",
-      isActive: false,
-      attachments: 1,
-    },
-  ]);
+  useEffect(() => {
+    const fetchStarredChats = async () => {
+      if (!token) return;
+      setError(null);
+      try {
+        const chats = await authAPI.getChats(token);
+        const starred = chats
+          .filter((chat) => chat.status === "STARRED")
+          .map((chat) => ({
+            id: chat.id,
+            title: chat.title || "Untitled Chat",
+            lastMessage: chat.messages?.length
+              ? chat.messages[chat.messages.length - 1].content
+              : "",
+            participants: ["You"],
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            tags: chat.tags || [],
+            messageCount: chat.messages?.length || 0,
+            type: "conversation",
+            category: "General",
+            isActive: false,
+            attachments: chat.documents?.length || 0,
+          }));
+        setStarredChats(starred);
+      } catch (err) {
+        setError("Failed to load starred chats");
+        console.error("Error fetching starred chats:", err);
+      }
+    };
+    fetchStarredChats();
+  }, [token]);
+
+  const handleToggleOptions = (chatId, e) => {
+    e.stopPropagation();
+    setOpenOptionsId(openOptionsId === chatId ? null : chatId);
+  };
+
+  const handleUnstar = async (chatId, e) => {
+    e.stopPropagation();
+    setError(null);
+    try {
+      await authAPI.updateChat(token, chatId, "NONE");
+      setStarredChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      setOpenOptionsId(null);
+    } catch (err) {
+      setError("Failed to unstar chat");
+      console.error("Error unstarring chat:", err);
+    }
+  };
+
+  const handleDelete = async (chatId, e) => {
+    e.stopPropagation();
+    setError(null);
+    try {
+      await authAPI.deleteChat(token, chatId);
+      setStarredChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      setOpenOptionsId(null);
+    } catch (err) {
+      setError("Failed to delete chat");
+      console.error("Error deleting chat:", err);
+    }
+  };
+
+  const handleShare = async (chatId, e) => {
+    e.stopPropagation();
+    setError(null);
+    try {
+      // Placeholder for POST /api/chats/:id/share
+      const shareLink = await authAPI.shareChat(token, chatId);
+      navigator.clipboard.writeText(shareLink);
+      alert("Share link copied to clipboard!");
+      setOpenOptionsId(null);
+    } catch (err) {
+      setError("Failed to share chat");
+      console.error("Error sharing chat:", err);
+    }
+  };
+
+  const getModalPosition = (chatId) => {
+    const button = buttonRefs.current[chatId];
+    if (!button) return { top: 0, left: 0 };
+    const rect = button.getBoundingClientRect();
+    const modalHeight = 100;
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    return {
+      top:
+        spaceBelow < modalHeight + 20
+          ? rect.top + window.scrollY - modalHeight - 4
+          : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX - 100,
+    };
+  };
 
   const filteredChats = starredChats
     .filter((chat) => {
@@ -115,7 +142,7 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
     });
 
   const handleSelectChat = (chat) => {
-    onSelectChat(chat);
+    onSelectChat(chat.id);
     onClose();
   };
 
@@ -141,7 +168,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
   return (
     <div className="fixed inset-0 bg-gray-50/75 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
@@ -156,9 +182,14 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               </p>
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
 
-        {/* Filters and Search */}
         <div className="p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
@@ -171,7 +202,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition-colors"
               />
             </div>
-
             <div className="flex gap-3">
               <select
                 value={sortBy}
@@ -182,7 +212,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 <option value="title">Title A-Z</option>
                 <option value="messages">Most Messages</option>
               </select>
-
               <div className="flex bg-gray-200 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -207,7 +236,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               </div>
             </div>
           </div>
-
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <span>{filteredChats.length} starred chats</span>
@@ -231,9 +259,13 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               Clear filters
             </button>
           </div>
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center">
+              {error}
+            </div>
+          )}
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-hidden">
           {filteredChats.length > 0 ? (
             <div className="h-full overflow-y-auto p-6">
@@ -248,7 +280,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                       {chat.isActive && (
                         <div className="absolute top-4 right-4 w-3 h-3 bg-green-500 rounded-full"></div>
                       )}
-
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <MessageSquare className="w-5 h-5 text-blue-500" />
@@ -260,9 +291,17 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             {chat.category}
                           </span>
                         </div>
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <button
+                            ref={(el) => (buttonRefs.current[chat.id] = el)}
+                            onClick={(e) => handleToggleOptions(chat.id, e)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded transition-all"
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </div>
                       </div>
-
                       <div className="mb-4">
                         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
                           {chat.title}
@@ -271,7 +310,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           {chat.lastMessage}
                         </p>
                       </div>
-
                       <div className="flex flex-wrap gap-1 mb-4">
                         {chat.tags.slice(0, 3).map((tag, index) => (
                           <span
@@ -283,7 +321,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           </span>
                         ))}
                       </div>
-
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
@@ -294,6 +331,34 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           <span>{chat.attachments} files</span>
                         </div>
                       </div>
+                      {openOptionsId === chat.id && (
+                        <div
+                          className="fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[9999]"
+                          style={getModalPosition(chat.id)}
+                        >
+                          <button
+                            onClick={(e) => handleUnstar(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <Star className="w-4 h-4 text-yellow-500" />
+                            Unstar
+                          </button>
+                          <button
+                            onClick={(e) => handleShare(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <Share2 className="w-4 h-4 text-blue-400" />
+                            Share
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -316,7 +381,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             {chat.category}
                           </span>
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-gray-900 truncate">
@@ -338,28 +402,50 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             <span>{chat.attachments} attachments</span>
                           </div>
                         </div>
-
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Share chat:", chat.id);
-                            }}
+                            onClick={(e) => handleShare(chat.id, e)}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                           >
                             <Share2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("More options:", chat.id);
-                            }}
+                            ref={(el) => (buttonRefs.current[chat.id] = el)}
+                            onClick={(e) => handleToggleOptions(chat.id, e)}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
+                      {openOptionsId === chat.id && (
+                        <div
+                          className="fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[9999]"
+                          style={getModalPosition(chat.id)}
+                        >
+                          <button
+                            onClick={(e) => handleUnstar(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <Star className="w-4 h-4 text-yellow-500" />
+                            Unstar
+                          </button>
+                          <button
+                            onClick={(e) => handleShare(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
+                          >
+                            <Share2 className="w-4 h-4 text-blue-400" />
+                            Share
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(chat.id, e)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -380,7 +466,6 @@ const StarredChatsModal = ({ isOpen, onClose, onSelectChat }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <span>{starredChats.length} starred conversations</span>

@@ -1,17 +1,26 @@
 import { useState, useRef, useEffect } from "react";
 import { GripVertical } from "lucide-react";
-import PromptArea from "../interactive/PromptArea";
-import DataVisualization from "../views/DataVisualization";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
+import PromptArea from "../interactive/PromptArea.jsx";
+import DataVisualization from "./DataVisualization.jsx";
 
 const Dashboard = () => {
-  const [filesToVisualize, setFilesToVisualize] = useState(null);
-  const [leftWidth, setLeftWidth] = useState(40); // Percentage width for left panel
+  const { token } = useAuth();
+  const [selectedChatId] = useState(null);
+  const [filesToVisualize, setFilesToVisualize] = useState([]);
+  const [leftWidth, setLeftWidth] = useState(40);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef(null);
   const dividerRef = useRef(null);
 
-  const handleVisualize = (files) => {
-    setFilesToVisualize(files);
+  const handleVisualize = async (chatId, file) => {
+    try {
+      const { url, key } = await authAPI.uploadFile(token, chatId, file);
+      setFilesToVisualize((prev) => [...prev, { url, key, name: file.name }]);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    }
   };
 
   const handleMouseDown = (e) => {
@@ -26,12 +35,9 @@ const Dashboard = () => {
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging || !containerRef.current) return;
-
       const containerRect = containerRef.current.getBoundingClientRect();
       const newLeftWidth =
         ((e.clientX - containerRect.left) / containerRect.width) * 100;
-
-      // Constrain the width between 20% and 80%
       const constrainedWidth = Math.min(Math.max(newLeftWidth, 20), 80);
       setLeftWidth(constrainedWidth);
     };
@@ -41,7 +47,6 @@ const Dashboard = () => {
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     }
-
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -55,12 +60,13 @@ const Dashboard = () => {
       ref={containerRef}
       className="flex-1 flex h-screen overflow-hidden bg-gray-50 relative"
     >
-      {/* Left Panel - PromptArea */}
       <div style={{ width: `${leftWidth}%` }} className="flex-shrink-0 h-full">
-        <PromptArea onVisualize={handleVisualize} />
+        <PromptArea
+          selectedChatId={selectedChatId}
+          onVisualize={handleVisualize}
+        />
       </div>
 
-      {/* Resizable Divider */}
       <div
         ref={dividerRef}
         onMouseDown={handleMouseDown}
@@ -68,7 +74,6 @@ const Dashboard = () => {
           isDragging ? "bg-blue-500 shadow-lg" : ""
         }`}
       >
-        {/* Drag Handle */}
         <div className="absolute inset-y-0 -left-1 -right-1 flex items-center justify-center">
           <div
             className={`w-3 h-16 bg-gray-400 rounded-full flex items-center justify-center transition-all duration-200 group-hover:opacity-100 ${
@@ -78,8 +83,6 @@ const Dashboard = () => {
             <GripVertical className="w-3 h-3 text-white" />
           </div>
         </div>
-
-        {/* Active Dragging Indicator */}
         {isDragging && (
           <div className="absolute inset-y-0 left-0 w-1 opacity-30 shadow-lg">
             <div className="absolute -left-2 -right-2 inset-y-0 bg-blue-200 opacity-30"></div>
@@ -87,7 +90,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Right Panel - DataVisualization */}
       <div
         style={{ width: `${100 - leftWidth}%` }}
         className="flex-shrink-0 h-full"
@@ -95,7 +97,6 @@ const Dashboard = () => {
         <DataVisualization files={filesToVisualize} />
       </div>
 
-      {/* Resize Guide Overlay */}
       {isDragging && (
         <div className="absolute inset-0 pointer-events-none">
           <div

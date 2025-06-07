@@ -19,19 +19,16 @@ const Signup = () => {
   const { signup, loading, error, isAuthenticated, clearError } = useAuth();
   const navigate = useNavigate();
 
-  // Animation effect
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
-  // Clear error when component unmounts
   useEffect(() => {
     return () => clearError();
   }, [clearError]);
@@ -45,93 +42,50 @@ const Signup = () => {
 
   const validateForm = () => {
     const errors = {};
-
-    if (!formData.firstName.trim()) {
-      errors.firstName = "First name is required";
-    }
-
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Last name is required";
-    }
-
+    if (!formData.firstName.trim()) errors.firstName = "First name is required";
+    if (!formData.lastName.trim()) errors.lastName = "Last name is required";
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = "Email is invalid";
     }
-
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (formData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
     }
-
     if (!formData.confirmPassword) {
       errors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
     }
-
     return errors;
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Clear validation errors for the field being edited
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (validationErrors[name]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
+      setValidationErrors((prev) => ({ ...prev, [name]: "" }));
     }
-
-    // Clear auth error when user starts typing
-    if (error) {
-      clearError();
-    }
+    if (error) clearError();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Client-side validation
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
     }
-
     setIsSubmitting(true);
     setValidationErrors({});
-
     try {
-      const { confirmPassword: _confirmPassword, ...userData } = formData;
+      const userData = { ...formData };
+      delete userData.confirmPassword;
       await signup(userData);
-      // Navigation will be handled by useEffect
     } catch (err) {
-      // Error is handled in the context, but let's log more details
-      console.error("Signup error:", err);
-      console.error("Response data:", err?.response?.data);
-      console.error("Request payload:", {
-        ...formData,
-        confirmPassword: undefined,
-      });
-
-      // Show a more helpful message if it's a Firebase configuration issue
-      if (
-        err?.response?.data?.error?.includes(
-          "configuration corresponding to the provided identifier"
-        )
-      ) {
-        console.error(
-          "Firebase configuration issue detected. Backend needs proper Firebase setup."
-        );
-      }
+      console.error("Signup error:", err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -139,7 +93,6 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
@@ -151,9 +104,7 @@ const Signup = () => {
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         }`}
       >
-        {/* Glass card effect */}
         <div className="backdrop-blur-xl bg-white/70 rounded-3xl shadow-2xl border border-white/20 p-8 space-y-6">
-          {/* Header */}
           <div className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-3 hover:rotate-0 transition-transform duration-300">
               <svg
@@ -180,7 +131,6 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <div className="bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-2xl p-4 animate-pulse">
               <div className="flex items-center space-x-3">
@@ -204,9 +154,7 @@ const Signup = () => {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label
@@ -228,7 +176,7 @@ const Signup = () => {
                       validationErrors.firstName
                         ? "border-red-300"
                         : "border-gray-200"
-                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
+                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
                     placeholder="First name"
                   />
                   {validationErrors.firstName && (
@@ -240,7 +188,7 @@ const Signup = () => {
                       >
                         <path
                           fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1 1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -270,7 +218,7 @@ const Signup = () => {
                       validationErrors.lastName
                         ? "border-red-300"
                         : "border-gray-200"
-                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
+                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
                     placeholder="Last name"
                   />
                   {validationErrors.lastName && (
@@ -282,7 +230,7 @@ const Signup = () => {
                       >
                         <path
                           fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1 1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -293,7 +241,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Email Field */}
             <div className="space-y-2">
               <label
                 htmlFor="email"
@@ -314,7 +261,7 @@ const Signup = () => {
                     validationErrors.email
                       ? "border-red-300"
                       : "border-gray-200"
-                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
+                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70`}
                   placeholder="Enter your email"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -341,7 +288,7 @@ const Signup = () => {
                     >
                       <path
                         fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1 1z"
                         clipRule="evenodd"
                       />
                     </svg>
@@ -351,7 +298,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Password Fields */}
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <label
@@ -373,7 +319,7 @@ const Signup = () => {
                       validationErrors.password
                         ? "border-red-300"
                         : "border-gray-200"
-                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70 pr-12`}
+                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70 pr-12`}
                     placeholder="Create a password"
                   />
                   <button
@@ -426,7 +372,7 @@ const Signup = () => {
                       >
                         <path
                           fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1 1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -456,7 +402,7 @@ const Signup = () => {
                       validationErrors.confirmPassword
                         ? "border-red-300"
                         : "border-gray-200"
-                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70 pr-12`}
+                    } rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 placeholder-gray-400 group-hover:bg-white/70 pr-12`}
                     placeholder="Confirm your password"
                   />
                   <button
@@ -509,7 +455,7 @@ const Signup = () => {
                       >
                         <path
                           fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1 1z"
                           clipRule="evenodd"
                         />
                       </svg>
@@ -520,11 +466,10 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting || loading}
-              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none focus:outline-none focus:ring-2 focus:ring-green-500/50"
+              className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               {isSubmitting || loading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -552,7 +497,6 @@ const Signup = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -564,7 +508,6 @@ const Signup = () => {
             </div>
           </div>
 
-          {/* Sign in link */}
           <div className="text-center">
             <Link
               to="/login"

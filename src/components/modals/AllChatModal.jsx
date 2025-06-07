@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import {
   Search,
   Star,
@@ -17,142 +19,44 @@ import {
 } from "lucide-react";
 
 const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
+  const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [viewMode, setViewMode] = useState("list");
+  const [allChats, setAllChats] = useState([]);
 
-  // Mock data for all chats
-  const [allChats] = useState([
-    {
-      id: 1,
-      title: "Marketing Strategy Discussion",
-      lastMessage: "Let's focus on the Q2 campaign objectives...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-15 10:30 AM",
-      updatedAt: "2024-01-15 02:45 PM",
-      tags: ["marketing", "strategy"],
-      messageCount: 45,
-      type: "conversation",
-      category: "Business",
-      isActive: false,
-      starred: true,
-      pinned: false,
-      attachments: 3,
-    },
-    {
-      id: 2,
-      title: "Code Review Session",
-      lastMessage: "The implementation looks good...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-14 04:20 PM",
-      updatedAt: "2024-01-14 06:15 PM",
-      tags: ["coding", "review"],
-      messageCount: 28,
-      type: "technical",
-      category: "Development",
-      isActive: true,
-      starred: true,
-      pinned: true,
-      attachments: 8,
-    },
-    {
-      id: 3,
-      title: "Quick Math Help",
-      lastMessage: "Thanks for the calculation help!",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-14 01:20 PM",
-      updatedAt: "2024-01-14 01:45 PM",
-      tags: ["math", "help"],
-      messageCount: 8,
-      type: "support",
-      category: "Education",
-      isActive: false,
-      starred: false,
-      pinned: false,
-      attachments: 0,
-    },
-    {
-      id: 4,
-      title: "Creative Writing Session",
-      lastMessage: "The character development in chapter 3...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-13 11:30 AM",
-      updatedAt: "2024-01-13 01:20 PM",
-      tags: ["writing", "creative"],
-      messageCount: 67,
-      type: "creative",
-      category: "Creative",
-      isActive: false,
-      starred: true,
-      pinned: false,
-      attachments: 2,
-    },
-    {
-      id: 5,
-      title: "Data Analysis Help",
-      lastMessage: "The correlation shows significant...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-12 02:15 PM",
-      updatedAt: "2024-01-12 04:30 PM",
-      tags: ["data", "analysis"],
-      messageCount: 19,
-      type: "analytical",
-      category: "Data Science",
-      isActive: false,
-      starred: true,
-      pinned: false,
-      attachments: 5,
-    },
-    {
-      id: 6,
-      title: "General Questions",
-      lastMessage: "What are the benefits of...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-11 09:45 AM",
-      updatedAt: "2024-01-11 09:50 AM",
-      tags: ["general", "questions"],
-      messageCount: 3,
-      type: "conversation",
-      category: "General",
-      isActive: false,
-      starred: false,
-      pinned: false,
-      attachments: 0,
-    },
-    {
-      id: 7,
-      title: "Language Learning Practice",
-      lastMessage: "Tu pronunciación está mejorando...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-11 09:45 AM",
-      updatedAt: "2024-01-11 11:20 AM",
-      tags: ["language", "spanish"],
-      messageCount: 89,
-      type: "educational",
-      category: "Education",
-      isActive: false,
-      starred: true,
-      pinned: false,
-      attachments: 1,
-    },
-    {
-      id: 8,
-      title: "Recipe Ideas",
-      lastMessage: "Here are some vegetarian options...",
-      participants: ["You", "Claude"],
-      createdAt: "2024-01-10 07:20 PM",
-      updatedAt: "2024-01-10 07:35 PM",
-      tags: ["cooking", "recipes"],
-      messageCount: 12,
-      type: "conversation",
-      category: "Lifestyle",
-      isActive: false,
-      starred: false,
-      pinned: false,
-      attachments: 0,
-    },
-  ]);
+  useEffect(() => {
+    const fetchChats = async () => {
+      if (!token) return;
+      try {
+        const chats = await authAPI.getChats(token);
+        setAllChats(
+          chats.map((chat) => ({
+            id: chat.id,
+            title: chat.title || "Untitled Chat",
+            lastMessage: chat.messages?.length
+              ? chat.messages[chat.messages.length - 1].content
+              : "",
+            participants: ["You"],
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            tags: chat.tags || [],
+            messageCount: chat.messages?.length || 0,
+            type: "conversation",
+            category: "General",
+            isActive: false,
+            starred: chat.status === "STARRED",
+            pinned: false,
+            attachments: chat.documents?.length || 0,
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching chats:", err);
+      }
+    };
+    fetchChats();
+  }, [token]);
 
   const filteredChats = allChats
     .filter((chat) => {
@@ -166,15 +70,12 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
         filterType === "all" ||
         (filterType === "starred" && chat.starred) ||
         (filterType === "active" && chat.isActive) ||
-        (filterType === "pinned" && chat.pinned) ||
-        chat.category.toLowerCase() === filterType;
+        (filterType === "pinned" && chat.pinned);
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
-      // Always sort pinned chats first
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;
-
       switch (sortBy) {
         case "recent":
           return new Date(b.updatedAt) - new Date(a.updatedAt);
@@ -188,7 +89,7 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
     });
 
   const handleSelectChat = (chat) => {
-    onSelectChat(chat);
+    onSelectChat(chat.id);
     onClose();
   };
 
@@ -218,7 +119,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
   return (
     <div className="fixed inset-0 bg-gray-50/75 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -233,7 +133,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
           </div>
         </div>
 
-        {/* Filters and Search */}
         <div className="p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
@@ -246,7 +145,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
               />
             </div>
-
             <div className="flex gap-3">
               <select
                 value={filterType}
@@ -257,12 +155,7 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 <option value="starred">Starred</option>
                 <option value="pinned">Pinned</option>
                 <option value="active">Active</option>
-                <option value="business">Business</option>
-                <option value="development">Development</option>
-                <option value="creative">Creative</option>
-                <option value="education">Education</option>
               </select>
-
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -272,7 +165,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                 <option value="title">Title A-Z</option>
                 <option value="messages">Most Messages</option>
               </select>
-
               <div className="flex bg-gray-200 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -297,7 +189,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
               </div>
             </div>
           </div>
-
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <span>{filteredChats.length} chats</span>
@@ -321,7 +212,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-hidden">
           {filteredChats.length > 0 ? (
             <div className="h-full overflow-y-auto p-6">
@@ -344,7 +234,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                         )}
                       </div>
-
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <MessageSquare className="w-5 h-5 text-blue-500" />
@@ -357,7 +246,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           </span>
                         </div>
                       </div>
-
                       <div className="mb-4">
                         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 pr-8">
                           {chat.title}
@@ -366,7 +254,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           {chat.lastMessage}
                         </p>
                       </div>
-
                       <div className="flex flex-wrap gap-1 mb-4">
                         {chat.tags.slice(0, 3).map((tag, index) => (
                           <span
@@ -378,7 +265,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                           </span>
                         ))}
                       </div>
-
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
@@ -415,7 +301,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             {chat.category}
                           </span>
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-gray-900 truncate">
@@ -446,12 +331,26 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             )}
                           </div>
                         </div>
-
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              console.log("Pin/Unpin chat:", chat.id);
+                              try {
+                                await authAPI.updateChat(
+                                  token,
+                                  chat.id,
+                                  chat.pinned ? "NONE" : "PINNED"
+                                );
+                                setAllChats((prev) =>
+                                  prev.map((c) =>
+                                    c.id === chat.id
+                                      ? { ...c, pinned: !c.pinned }
+                                      : c
+                                  )
+                                );
+                              } catch (err) {
+                                console.error("Error pinning chat:", err);
+                              }
                             }}
                             className={`p-2 rounded transition-colors ${
                               chat.pinned
@@ -463,9 +362,24 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             <Pin className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              console.log("Star/Unstar chat:", chat.id);
+                              try {
+                                await authAPI.updateChat(
+                                  token,
+                                  chat.id,
+                                  chat.starred ? "NONE" : "STARRED"
+                                );
+                                setAllChats((prev) =>
+                                  prev.map((c) =>
+                                    c.id === chat.id
+                                      ? { ...c, starred: !c.starred }
+                                      : c
+                                  )
+                                );
+                              } catch (err) {
+                                console.error("Error starring chat:", err);
+                              }
                             }}
                             className={`p-2 rounded transition-colors ${
                               chat.starred
@@ -491,9 +405,16 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
                             <Archive className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              console.log("Delete chat:", chat.id);
+                              try {
+                                await authAPI.deleteChat(token, chat.id);
+                                setAllChats((prev) =>
+                                  prev.filter((c) => c.id !== chat.id)
+                                );
+                              } catch (err) {
+                                console.error("Error deleting chat:", err);
+                              }
                             }}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="Delete"
@@ -542,7 +463,6 @@ const AllChatsModal = ({ isOpen, onClose, onSelectChat }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-2">

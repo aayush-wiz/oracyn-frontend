@@ -4,11 +4,11 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext.jsx";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import Login from "./components/auth/Login";
-import Signup from "./components/auth/Signup";
-import Dashboard from "./components/ui/Dashboard";
+import { AuthProvider } from "./contexts/AuthProvider.jsx";
+import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import Login from "./components/auth/Login.jsx";
+import Signup from "./components/auth/Signup.jsx";
+import Dashboard from "./components/ui/Dashboard.jsx";
 import Settings from "./components/ui/Settings.jsx";
 import Profile from "./components/user/Profile.jsx";
 import Data from "./components/user/Data.jsx";
@@ -19,47 +19,33 @@ import "./App.css";
 
 function App() {
   return (
-    <>
+    <Router>
       <AuthProvider>
-        <Router>
-          <div className="App">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-
-              {/* Protected routes with shared Layout (Sidebar) */}
-              <Route
-                path="/"
-                element={
-                  // <ProtectedRoute>
-                  // </ProtectedRoute>
+        <div className="App">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+              element={
+                <ProtectedRoute>
                   <Layout />
-                }
-              >
-                {/* Dashboard route */}
-                <Route path="dashboard" element={<Dashboard />} />
-
-                {/* Settings routes with nested routes */}
-                <Route path="settings" element={<Settings />}>
-                  {/* Nested routes for settings */}
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="data" element={<Data />} />
-                  <Route path="security" element={<Security />} />
-                  <Route path="integrations" element={<Integrations />} />
-                </Route>
-
-                {/* Redirect root to dashboard */}
-                <Route index element={<Navigate to="/dashboard" replace />} />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="settings" element={<Settings />}>
+                <Route path="profile" element={<Profile />} />
+                <Route path="data" element={<Data />} />
+                <Route path="security" element={<Security />} />
+                <Route path="integrations" element={<Integrations />} />
               </Route>
-
-              {/* Catch all other routes and redirect to dashboard */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </div>
-        </Router>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </div>
       </AuthProvider>
-    </>
+    </Router>
   );
 }
 

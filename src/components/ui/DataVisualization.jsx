@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth.js";
+
 import PDFViewer from "../views/PDFViewer";
 import WordViewer from "../views/WordViewer";
 import ExcelViewer from "../views/ExcelViewer";
@@ -17,10 +19,26 @@ import {
   Presentation,
 } from "lucide-react";
 
-const DataVisualization = ({ files }) => {
+const DataVisualization = ({ files: initialFiles, selectedChatId }) => {
+  const { token } = useAuth();
   const [selectedFile, setSelectedFile] = useState(0);
+  const [files] = useState(initialFiles || []);
 
-  // Fixed icon function with exact MIME type matching
+  // Fetch files associated with the selected chat
+  useEffect(() => {
+    const fetchFiles = async () => {
+      if (!selectedChatId || !token) return;
+      try {
+        // Placeholder: Add GET /api/chats/:id/files endpoint
+        // const chatFiles = await authAPI.getChatFiles(token, selectedChatId);
+        // setFiles(chatFiles.map(f => ({ url: f.url, key: f.key, name: f.name, type: f.type, size: f.size })));
+      } catch (err) {
+        console.error("Error fetching chat files:", err);
+      }
+    };
+    fetchFiles();
+  }, [selectedChatId, token]);
+
   const getFileIcon = (fileType) => {
     const iconClass = "w-5 h-5";
     if (fileType === "application/pdf")
@@ -101,7 +119,14 @@ const DataVisualization = ({ files }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  if (!files || files.length === 0) {
+  const handleDownload = (file) => {
+    const link = document.createElement("a");
+    link.href = file.url;
+    link.download = file.name;
+    link.click();
+  };
+
+  if (!files.length) {
     return (
       <div className="w-full h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -128,7 +153,6 @@ const DataVisualization = ({ files }) => {
 
   return (
     <div className="w-full h-screen bg-white flex flex-col">
-      {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -144,11 +168,12 @@ const DataVisualization = ({ files }) => {
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-            {/* Actions */}
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-white rounded-lg transition-colors text-gray-500 hover:text-gray-700">
+              <button
+                onClick={() => handleDownload(files[selectedFile])}
+                className="p-2 hover:bg-white rounded-lg transition-colors text-gray-500 hover:text-gray-700"
+              >
                 <Download className="w-4 h-4" />
               </button>
               <button className="p-2 hover:bg-white rounded-lg transition-colors text-gray-500 hover:text-gray-700">
@@ -162,7 +187,6 @@ const DataVisualization = ({ files }) => {
         </div>
       </div>
 
-      {/* File Navigation */}
       {files.length > 1 && (
         <div className="border-b border-gray-200 bg-gray-50">
           <div className="flex overflow-x-auto">
@@ -187,7 +211,6 @@ const DataVisualization = ({ files }) => {
         </div>
       )}
 
-      {/* Content Area */}
       <div className="flex-1 overflow-hidden p-6">
         {getFileViewer(files[selectedFile])}
       </div>

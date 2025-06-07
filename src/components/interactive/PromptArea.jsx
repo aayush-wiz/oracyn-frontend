@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import {
   Brain,
   Upload,
@@ -13,53 +15,81 @@ import {
 } from "lucide-react";
 import FileUpload from "./FileUpload";
 
-const PromptArea = ({ onVisualize }) => {
+const PromptArea = ({ selectedChatId, onVisualize }) => {
+  const { token } = useAuth();
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [prompt, setPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleFilesUpload = (files) => {
     setUploadedFiles((prev) => [...prev, ...files]);
-    console.log("Files uploaded:", files);
-    // Here you would typically send files to your backend
   };
 
   const handleFileRemove = (indexToRemove) => {
     setUploadedFiles((prev) =>
       prev.filter((_, index) => index !== indexToRemove)
     );
-    console.log("File removed at index:", indexToRemove);
   };
 
   const handleVisualize = async () => {
-    if (uploadedFiles.length > 0) {
-      setIsProcessing(true);
-      console.log("Visualizing files:", uploadedFiles);
-      if (onVisualize) {
-        onVisualize(uploadedFiles);
-      }
-      // Simulate processing delay
-      setTimeout(() => setIsProcessing(false), 1000);
-      // Here you would typically send the files to your backend for visualization
+    if (!selectedChatId || uploadedFiles.length === 0) return;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const uploaded = await Promise.all(
+        uploadedFiles.map(async (file) => {
+          const { url, key } = await authAPI.uploadFile(
+            token,
+            selectedChatId,
+            file
+          );
+          return {
+            url,
+            key,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          };
+        })
+      );
+      onVisualize(uploaded);
+      setUploadedFiles([]); // Clear files after successful upload
+    } catch (err) {
+      setError("Failed to upload files");
+      console.error("Upload error:", err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleSubmitPrompt = () => {
-    if (prompt.trim() && uploadedFiles.length > 0) {
-      console.log("Submitting prompt:", prompt);
-      console.log("With files:", uploadedFiles);
-      // Here you would typically send the prompt and files to your backend for analysis
+  const handleSubmitPrompt = async () => {
+    if (!prompt.trim() || !selectedChatId) return;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      // Placeholder: Add backend endpoint POST /api/chats/:id/query
+      console.log("Submitting prompt to backend:", {
+        chatId: selectedChatId,
+        prompt,
+      });
+      // Example: await authAPI.submitQuery(token, selectedChatId, prompt);
+      setPrompt(""); // Clear prompt after submission
+    } catch (err) {
+      setError("Failed to submit query");
+      console.error("Query error:", err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey && uploadedFiles.length > 0) {
+    if (e.key === "Enter" && !e.shiftKey && prompt.trim() && selectedChatId) {
       e.preventDefault();
       handleSubmitPrompt();
     }
   };
 
-  // Fixed icon function with exact MIME type matching
   const getFileIcon = (file) => {
     if (file.type === "application/pdf")
       return <FileText className="w-4 h-4 text-red-600 flex-shrink-0" />;
@@ -92,13 +122,12 @@ const PromptArea = ({ onVisualize }) => {
     return <File className="w-4 h-4 text-gray-600 flex-shrink-0" />;
   };
 
-  const isInputDisabled = uploadedFiles.length === 0;
-  const isSubmitDisabled = !prompt.trim() || uploadedFiles.length === 0;
-  const isVisualizeDisabled = uploadedFiles.length === 0;
+  const isInputDisabled = !selectedChatId;
+  const isSubmitDisabled = !prompt.trim() || !selectedChatId;
+  const isVisualizeDisabled = uploadedFiles.length === 0 || !selectedChatId;
 
   return (
     <div className="w-full h-screen flex flex-col bg-white border-r border-gray-200">
-      {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -113,7 +142,6 @@ const PromptArea = ({ onVisualize }) => {
         </div>
       </div>
 
-      {/* File Upload Status */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -178,7 +206,6 @@ const PromptArea = ({ onVisualize }) => {
         )}
       </div>
 
-      {/* File Upload Section */}
       <div className="p-6 flex-1 overflow-auto">
         <FileUpload
           onFilesUpload={handleFilesUpload}
@@ -187,9 +214,12 @@ const PromptArea = ({ onVisualize }) => {
         />
       </div>
 
-      {/* Action Area */}
       <div className="p-6 border-t border-gray-200 bg-gray-50 space-y-6">
-        {/* Visualize Button */}
+        {error && (
+          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center">
+            {error}
+          </div>
+        )}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
             <Eye className="w-4 h-4" />
@@ -221,13 +251,11 @@ const PromptArea = ({ onVisualize }) => {
           </p>
         </div>
 
-        {/* AI Query Section */}
         <div className="space-y-3">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-600" />
             AI Query (for later analysis)
           </label>
-
           <div className="relative">
             <textarea
               value={prompt}
@@ -242,7 +270,7 @@ const PromptArea = ({ onVisualize }) => {
               rows="3"
               placeholder={
                 isInputDisabled
-                  ? "Upload documents first..."
+                  ? "Select a chat first..."
                   : "Prepare your analysis query...\n\nExample: Summarize the key points"
               }
             />
@@ -258,11 +286,10 @@ const PromptArea = ({ onVisualize }) => {
               <Send className="w-4 h-4" />
             </button>
           </div>
-
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span className="flex items-center gap-1">
               {isInputDisabled ? (
-                <>Upload files to enable AI analysis</>
+                <>Select a chat to enable AI analysis</>
               ) : (
                 <>Press Shift + Enter for new line</>
               )}

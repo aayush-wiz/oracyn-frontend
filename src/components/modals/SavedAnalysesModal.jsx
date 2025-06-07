@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import {
   Search,
   Star,
@@ -18,104 +20,51 @@ import {
 } from "lucide-react";
 
 const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
+  const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("grid");
+  const [savedAnalyses, setSavedAnalyses] = useState([]);
 
-  // Mock data - replace with actual saved analyses from your state/API
-  const [savedAnalyses] = useState([
-    {
-      id: 1,
-      title: "Q4 Financial Report Analysis",
-      type: "summary",
-      query: "Summarize the main financial insights from Q4 report",
-      documents: ["Q4-report.pdf", "budget-analysis.xlsx"],
-      createdAt: "2024-01-15 10:30 AM",
-      updatedAt: "2024-01-15 10:30 AM",
-      tags: ["financial", "quarterly"],
-      preview:
-        "The Q4 financial report shows a 15% increase in revenue compared to the previous quarter...",
-      starred: true,
-      size: "2.4 MB",
-      queries: 24,
-    },
-    {
-      id: 2,
-      title: "Contract Terms Extraction",
-      type: "extraction",
-      query: "Extract all key terms and conditions from the contract",
-      documents: ["service-contract.pdf"],
-      createdAt: "2024-01-14 04:20 PM",
-      updatedAt: "2024-01-14 04:20 PM",
-      tags: ["legal", "contract"],
-      preview:
-        "Key terms identified: Payment terms - Net 30 days, Service level agreement - 99.9% uptime...",
-      starred: false,
-      size: "1.2 MB",
-      queries: 8,
-    },
-    {
-      id: 3,
-      title: "Product Comparison Study",
-      type: "comparison",
-      query: "Compare features and pricing across all product documents",
-      documents: ["product-a.pdf", "product-b.pdf", "pricing-sheet.xlsx"],
-      createdAt: "2024-01-13 11:30 AM",
-      updatedAt: "2024-01-13 11:30 AM",
-      tags: ["product", "comparison", "pricing"],
-      preview:
-        "Comparison analysis reveals that Product A offers better value for enterprise customers...",
-      starred: true,
-      size: "3.8 MB",
-      queries: 15,
-    },
-    {
-      id: 4,
-      title: "Regulatory Compliance Check",
-      type: "extraction",
-      query: "Find all regulatory compliance requirements",
-      documents: ["compliance-doc.pdf", "regulations.pdf"],
-      createdAt: "2024-01-12 02:15 PM",
-      updatedAt: "2024-01-12 02:15 PM",
-      tags: ["compliance", "regulatory"],
-      preview:
-        "Identified 12 compliance requirements including GDPR, SOX, and industry-specific regulations...",
-      starred: false,
-      size: "1.8 MB",
-      queries: 12,
-    },
-    {
-      id: 5,
-      title: "Market Research Analysis",
-      type: "summary",
-      query: "Analyze market trends and customer sentiment",
-      documents: ["market-report.pdf", "survey-data.csv"],
-      createdAt: "2024-01-11 09:45 AM",
-      updatedAt: "2024-01-11 09:45 AM",
-      tags: ["market", "research", "trends"],
-      preview:
-        "Market analysis shows growing demand for sustainable products with 67% consumer preference...",
-      starred: false,
-      size: "4.2 MB",
-      queries: 31,
-    },
-    {
-      id: 6,
-      title: "Technical Documentation Review",
-      type: "extraction",
-      query: "Extract technical specifications and requirements",
-      documents: ["tech-specs.pdf", "requirements.docx"],
-      createdAt: "2024-01-10 03:20 PM",
-      updatedAt: "2024-01-10 03:20 PM",
-      tags: ["technical", "documentation"],
-      preview:
-        "Technical specifications include API endpoints, database schema, and performance metrics...",
-      starred: true,
-      size: "2.1 MB",
-      queries: 19,
-    },
-  ]);
+  useEffect(() => {
+    const fetchAnalyses = async () => {
+      if (!token) return;
+      try {
+        const chats = await authAPI.getChats(token);
+        // Filter chats with queries/analyses
+        const analyses = chats
+          .filter((chat) => chat.messages?.some((msg) => msg.type === "query"))
+          .map((chat) => ({
+            id: chat.id,
+            title: chat.title || "Untitled Analysis",
+            type:
+              chat.messages.find((msg) => msg.type === "query")?.queryType ||
+              "summary",
+            query:
+              chat.messages.find((msg) => msg.type === "query")?.content || "",
+            documents: chat.documents?.map((doc) => doc.name) || [],
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            tags: chat.tags || [],
+            preview:
+              chat.messages
+                .find((msg) => msg.type === "response")
+                ?.content.slice(0, 100) || "",
+            starred: chat.status === "STARRED",
+            size:
+              chat.documents?.reduce((sum, doc) => sum + (doc.size || 0), 0) ||
+              0,
+            queries:
+              chat.messages?.filter((msg) => msg.type === "query").length || 0,
+          }));
+        setSavedAnalyses(analyses);
+      } catch (err) {
+        console.error("Error fetching analyses:", err);
+      }
+    };
+    fetchAnalyses();
+  }, [token]);
 
   const filteredAnalyses = savedAnalyses
     .filter((item) => {
@@ -142,7 +91,7 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
     });
 
   const handleSelectAnalysis = (analysis) => {
-    onSelectAnalysis(analysis);
+    onSelectAnalysis(analysis.id);
     onClose();
   };
 
@@ -173,12 +122,19 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
     }
   };
 
+  const formatSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-gray-50/75 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -195,10 +151,8 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
           </div>
         </div>
 
-        {/* Filters and Search */}
         <div className="p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -209,8 +163,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
               />
             </div>
-
-            {/* Filters */}
             <div className="flex gap-3">
               <select
                 value={filterType}
@@ -222,7 +174,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                 <option value="extraction">Extraction</option>
                 <option value="comparison">Comparison</option>
               </select>
-
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -232,7 +183,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                 <option value="title">Title A-Z</option>
                 <option value="queries">Most Queried</option>
               </select>
-
               <div className="flex bg-gray-200 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("grid")}
@@ -257,8 +207,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               </div>
             </div>
           </div>
-
-          {/* Stats */}
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-6 text-sm text-gray-600">
               <span>{filteredAnalyses.length} analyses found</span>
@@ -285,12 +233,10 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-hidden">
           {filteredAnalyses.length > 0 ? (
             <div className="h-full overflow-y-auto p-6">
               {viewMode === "grid" ? (
-                // Grid View
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredAnalyses.map((item) => (
                     <div
@@ -298,7 +244,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                       className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer group"
                       onClick={() => handleSelectAnalysis(item)}
                     >
-                      {/* Header */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           {getTypeIcon(item.type)}
@@ -327,8 +272,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                           </button>
                         </div>
                       </div>
-
-                      {/* Title and Preview */}
                       <div className="mb-4">
                         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
                           {item.title}
@@ -337,8 +280,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                           {item.preview}
                         </p>
                       </div>
-
-                      {/* Tags */}
                       <div className="flex flex-wrap gap-1 mb-4">
                         {item.tags.slice(0, 3).map((tag, index) => (
                           <span
@@ -355,8 +296,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                           </span>
                         )}
                       </div>
-
-                      {/* Footer */}
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-4 border-t border-gray-100">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
@@ -371,7 +310,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                   ))}
                 </div>
               ) : (
-                // List View
                 <div className="space-y-3">
                   {filteredAnalyses.map((item) => (
                     <div
@@ -380,7 +318,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                       onClick={() => handleSelectAnalysis(item)}
                     >
                       <div className="flex items-center gap-4">
-                        {/* Icon and Type */}
                         <div className="flex items-center gap-3">
                           {getTypeIcon(item.type)}
                           <span
@@ -391,8 +328,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                             {item.type}
                           </span>
                         </div>
-
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-gray-900 truncate">
@@ -412,11 +347,9 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
                             </span>
                             <span>{item.queries} queries</span>
                             <span>{item.documents.length} documents</span>
-                            <span>{item.size}</span>
+                            <span>{formatSize(item.size)}</span>
                           </div>
                         </div>
-
-                        {/* Actions */}
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => {
@@ -455,7 +388,6 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
               )}
             </div>
           ) : (
-            // Empty State
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -482,16 +414,18 @@ const SavedAnalysesModal = ({ isOpen, onClose, onSelectAnalysis }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
-              <span>Total storage: 14.5 GB</span>
+              <span>
+                Total storage:{" "}
+                {formatSize(savedAnalyses.reduce((sum, a) => sum + a.size, 0))}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              <span>Last updated: 2 hours ago</span>
+              <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">

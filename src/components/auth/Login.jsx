@@ -14,19 +14,16 @@ const Login = () => {
   const { login, loading, error, isAuthenticated, clearError } = useAuth();
   const navigate = useNavigate();
 
-  // Animation effect
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
-  // Clear error when component unmounts or form changes
   useEffect(() => {
     return () => clearError();
   }, [clearError]);
@@ -40,27 +37,17 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Clear error when user starts typing
-    if (error) {
-      clearError();
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (error) clearError();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
       await login(formData.email, formData.password);
-      // Navigation will be handled by useEffect
     } catch (err) {
-      // Error is handled in the context
-      console.error("Login error:", err);
+      console.error("Login error:", err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +55,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
@@ -80,9 +66,7 @@ const Login = () => {
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         }`}
       >
-        {/* Glass card effect */}
         <div className="backdrop-blur-xl bg-white/70 rounded-3xl shadow-2xl border border-white/20 p-8 space-y-8">
-          {/* Header */}
           <div className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-300">
               <svg
@@ -109,7 +93,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <div className="bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-2xl p-4 animate-pulse">
               <div className="flex items-center space-x-3">
@@ -133,9 +116,7 @@ const Login = () => {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
             <div className="space-y-2">
               <label
                 htmlFor="email"
@@ -173,7 +154,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
               <label
                 htmlFor="password"
@@ -237,7 +217,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting || loading}
@@ -269,7 +248,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -281,7 +259,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Sign up link */}
           <div className="text-center">
             <Link
               to="/signup"

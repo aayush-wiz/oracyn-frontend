@@ -1,5 +1,7 @@
-import  { useRef } from "react";
+import { useRef } from "react";
 import { MoreHorizontal, Star, Edit3, Trash2 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 
 const ChatItem = ({
   chat,
@@ -14,7 +16,9 @@ const ChatItem = ({
   setOpenOptionsId,
   setEditingName,
   isLast,
+  onClick,
 }) => {
+  const { token } = useAuth();
   const buttonRef = useRef(null);
 
   const handleToggleOptions = (e) => {
@@ -22,36 +26,53 @@ const ChatItem = ({
     setOpenOptionsId(openOptionsId === chat.id ? null : chat.id);
   };
 
+  const handleStar = async (e) => {
+    e.stopPropagation();
+    try {
+      await authAPI.updateChat(
+        token,
+        chat.id,
+        chat.isStarred ? "NONE" : "STARRED"
+      );
+      onStar(chat.id);
+    } catch (err) {
+      console.error("Error starring chat:", err);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    try {
+      await authAPI.deleteChat(token, chat.id);
+      onDelete(chat.id);
+    } catch (err) {
+      console.error("Error deleting chat:", err);
+    }
+  };
+
   const getModalPosition = () => {
     if (!buttonRef.current) return { top: 0, left: 0 };
-
     const rect = buttonRef.current.getBoundingClientRect();
     const modalHeight = 120;
-
-    // Check if this is likely the last visible item or near bottom
     const viewportHeight = window.innerHeight;
     const spaceBelow = viewportHeight - rect.bottom;
-
     if (isLast || spaceBelow < modalHeight + 20) {
-      // Open above
       return {
         top: rect.top + window.scrollY - modalHeight - 4,
         left: rect.left + window.scrollX - 100,
       };
-    } else {
-      // Open below
-      return {
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX - 100,
-      };
     }
+    return {
+      top: rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX - 100,
+    };
   };
 
   const modalPosition = getModalPosition();
 
   return (
     <>
-      <div className="group">
+      <div className="group" onClick={() => onClick?.(chat.id)}>
         <div
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
             openOptionsId === chat.id ? "bg-gray-100" : "hover:bg-gray-50"
@@ -90,7 +111,6 @@ const ChatItem = ({
         </div>
       </div>
 
-      {/* Chat Options Modal */}
       {openOptionsId === chat.id && !isEditing && (
         <div
           data-chat-modal={chat.id}
@@ -101,7 +121,7 @@ const ChatItem = ({
           }}
         >
           <button
-            onClick={() => onStar(chat.id)}
+            onClick={handleStar}
             className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left"
           >
             <Star
@@ -122,7 +142,7 @@ const ChatItem = ({
           </button>
           <div className="border-t border-gray-100 my-1"></div>
           <button
-            onClick={() => onDelete(chat.id)}
+            onClick={handleDelete}
             className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
           >
             <Trash2 className="w-4 h-4" />

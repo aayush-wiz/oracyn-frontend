@@ -12,113 +12,67 @@ import {
   Search,
   Bookmark,
 } from "lucide-react";
-import SavedAnalysesModal from "../modals/SavedAnalysesModal";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import ChatItem from "../interactive/ChatItem.jsx";
 import AllChatsModal from "../modals/AllChatModal.jsx";
 import StarredChatsModal from "../modals/StarredChatModal.jsx";
-
-const dummyChats = [
-  {
-    id: 1735574400000,
-    name: "Financial Report Analysis",
-    isEmpty: false,
-    isStarred: true,
-  },
-  {
-    id: 1735488000000,
-    name: "Marketing Strategy Review",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 1735401600000,
-    name: "Q4 Sales Data",
-    isEmpty: false,
-    isStarred: true,
-  },
-  {
-    id: 1735315200000,
-    name: "Customer Feedback Summary",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 1735228800000,
-    name: "Product Launch Metrics",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 1735142400000,
-    name: "Untitled Chat",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 1735142400040,
-    name: "Untitled Chat 2",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 1735142403040,
-    name: "Untitled Chat 3",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 17351424034220,
-    name: "Untitled Chat 4",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 17355424034220,
-    name: "Untitled Chat 5",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 13351424034220,
-    name: "Untitled Chat 6",
-    isEmpty: false,
-    isStarred: false,
-  },
-  {
-    id: 13351424134220,
-    name: "Untitled Chat 7",
-    isEmpty: false,
-    isStarred: false,
-  },
-];
+import SavedAnalysesModal from "../modals/SavedAnalysesModal.jsx";
 
 const Sidebar = ({ onSelectAnalysis }) => {
-  const [chats, setChats] = useState(dummyChats);
+  const { user, token, logout } = useAuth();
+  const [chats, setChats] = useState([]);
   const [isSavedAnalysesOpen, setIsSavedAnalysesOpen] = useState(false);
   const [isStarredModalOpen, setIsStarredModalOpen] = useState(false);
   const [isAllChatsModalOpen, setIsAllChatsModalOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [openChatOptionId, setOpenChatOptionId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Refs for modal management
   const sidebarScrollRef = useRef(null);
   const settingsButtonRef = useRef(null);
 
-  const handleStartNewChat = () => {
-    const hasEmptyChat = chats.some((chat) => chat.isEmpty);
-    if (!hasEmptyChat) {
-      const newChat = {
-        id: Date.now(),
-        name: `New Analysis`,
-        isEmpty: true,
-        isStarred: false,
-      };
-      setChats([newChat, ...chats]);
+  // Fetch chats on mount
+  useEffect(() => {
+    const fetchChats = async () => {
+      if (!token) return;
+      try {
+        const chatsData = await authAPI.getChats(token);
+        setChats(
+          chatsData.map((chat) => ({
+            id: chat.id,
+            name: chat.title || "Untitled Chat",
+            isEmpty: !chat.documents?.length && !chat.messages?.length,
+            isStarred: chat.status === "STARRED",
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+      }
+    };
+    fetchChats();
+  }, [token]);
+
+  const handleStartNewChat = async () => {
+    try {
+      const newChat = await authAPI.createChat(token, "New Analysis");
+      setChats([
+        {
+          id: newChat.id,
+          name: newChat.title || "New Analysis",
+          isEmpty: true,
+          isStarred: false,
+        },
+        ...chats,
+      ]);
+      onSelectAnalysis?.(newChat.id);
+    } catch (error) {
+      console.error("Error creating chat:", error);
     }
   };
 
@@ -129,6 +83,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
   };
 
   const handleStarChat = (chatId) => {
+    // TODO: Implement backend API call to update chat status
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === chatId ? { ...chat, isStarred: !chat.isStarred } : chat
@@ -138,6 +93,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
   };
 
   const handleDeleteChat = (chatId) => {
+    // TODO: Implement backend API call to delete chat
     setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
     setOpenChatOptionId(null);
   };
@@ -150,6 +106,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
 
   const handleSaveRename = (chatId) => {
     if (editingName.trim()) {
+      // TODO: Implement backend API call to update chat title
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat.id === chatId ? { ...chat, name: editingName.trim() } : chat
@@ -187,7 +144,6 @@ const Sidebar = ({ onSelectAnalysis }) => {
   // Global click handler to close modals
   useEffect(() => {
     const handleGlobalClick = (e) => {
-      // Close chat options if clicking outside
       if (openChatOptionId) {
         const chatModal = document.querySelector(
           `[data-chat-modal="${openChatOptionId}"]`
@@ -206,10 +162,8 @@ const Sidebar = ({ onSelectAnalysis }) => {
         }
       }
 
-      // Close settings modal if clicking outside
       if (isSettingsModalOpen) {
         const settingsModal = document.querySelector("[data-settings-modal]");
-
         if (
           settingsModal &&
           !settingsModal.contains(e.target) &&
@@ -321,7 +275,10 @@ const Sidebar = ({ onSelectAnalysis }) => {
                   </div>
                 </Link>
                 <div className="border-t border-gray-100 my-1"></div>
-                <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer">
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer"
+                >
                   <LogOut className="w-4 h-4" />
                   Logout
                 </button>
@@ -332,7 +289,6 @@ const Sidebar = ({ onSelectAnalysis }) => {
       ) : (
         // Expanded Sidebar
         <>
-          {/* Header */}
           <div className="flex flex-col p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -362,7 +318,6 @@ const Sidebar = ({ onSelectAnalysis }) => {
             </button>
           </div>
 
-          {/* Search */}
           <div className="p-4 border-b border-gray-200">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -376,10 +331,8 @@ const Sidebar = ({ onSelectAnalysis }) => {
             </div>
           </div>
 
-          {/* Navigation */}
           <div className="flex-1 overflow-hidden">
             <div ref={sidebarScrollRef} className="h-full overflow-y-auto">
-              {/* Quick Actions */}
               <div className="p-4 border-b border-gray-200">
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -399,12 +352,11 @@ const Sidebar = ({ onSelectAnalysis }) => {
                 </div>
               </div>
 
-              {/* Starred Analyses */}
               {starredChats.length > 0 && (
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    <h3 className="text-md font-500 text-gray-700 underline">
+                    <h3 className="text-md font-medium text-gray-700 underline">
                       Starred
                     </h3>
                   </div>
@@ -431,13 +383,13 @@ const Sidebar = ({ onSelectAnalysis }) => {
                         setOpenOptionsId={setOpenChatOptionId}
                         setEditingName={setEditingName}
                         isLast={index === starredChats.length - 1}
+                        onClick={() => onSelectAnalysis?.(chat.id)}
                       />
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Recent Analyses */}
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-gray-500" />
@@ -462,6 +414,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
                       setOpenOptionsId={setOpenChatOptionId}
                       setEditingName={setEditingName}
                       isLast={index === regularChats.length - 1}
+                      onClick={() => onSelectAnalysis?.(chat.id)}
                     />
                   ))}
                 </div>
@@ -469,9 +422,8 @@ const Sidebar = ({ onSelectAnalysis }) => {
             </div>
           </div>
 
-          {/* User Profile */}
           <div className="p-4 border-t border-gray-200">
-            <div className="relative ">
+            <div className="relative">
               <button
                 ref={settingsButtonRef}
                 onClick={(e) => {
@@ -488,11 +440,9 @@ const Sidebar = ({ onSelectAnalysis }) => {
                 </div>
                 <div className="flex-1 text-left">
                   <div className="text-sm font-medium text-gray-900">
-                    John Doe
+                    {user?.firstName} {user?.lastName}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    john.doe@company.com
-                  </div>
+                  <div className="text-xs text-gray-500">{user?.email}</div>
                 </div>
               </button>
 
@@ -508,7 +458,10 @@ const Sidebar = ({ onSelectAnalysis }) => {
                     </div>
                   </Link>
                   <div className="border-t border-gray-100 my-1"></div>
-                  <button className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer">
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer"
+                  >
                     <LogOut className="w-4 h-4" />
                     Logout
                   </button>
@@ -523,16 +476,19 @@ const Sidebar = ({ onSelectAnalysis }) => {
         isOpen={isSavedAnalysesOpen}
         onClose={() => setIsSavedAnalysesOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
+        chats={chats.filter((chat) => chat.status === "SAVED")}
       />
       <AllChatsModal
         isOpen={isAllChatsModalOpen}
         onClose={() => setIsAllChatsModalOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
+        chats={chats}
       />
       <StarredChatsModal
         isOpen={isStarredModalOpen}
         onClose={() => setIsStarredModalOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
+        chats={starredChats}
       />
     </div>
   );

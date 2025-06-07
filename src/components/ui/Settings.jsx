@@ -1,14 +1,6 @@
 import React, { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import {
-  User,
-  Database,
-  Shield,
-  Zap,
-  Settings2,
-  ChevronLeft,
-  Search,
-} from "lucide-react";
+import { User, Database, Shield, Zap, Settings2, Search } from "lucide-react";
 
 const Settings = () => {
   const location = useLocation();
