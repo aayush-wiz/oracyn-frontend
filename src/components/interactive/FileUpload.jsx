@@ -8,13 +8,16 @@ import {
   Presentation,
   AlertCircle,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadErrors, setUploadErrors] = useState([]);
+  const [isValidating, setIsValidating] = useState(false);
   const fileInputRef = useRef();
 
+  // File types allowed by backend
   const allowedTypes = [
     "application/pdf",
     "text/plain",
@@ -27,7 +30,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ];
 
-  // Fixed file type info with exact MIME type matching
+  // File type info with exact MIME type matching (matches backend)
   const fileTypeInfo = {
     "application/pdf": {
       icon: FileText,
@@ -113,23 +116,28 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
     e.target.value = "";
   };
 
-  const processFiles = (files) => {
+  const processFiles = async (files) => {
+    setIsValidating(true);
     const errors = [];
-    const validFiles = files.filter((file) => {
-      // Check file type
+    const validFiles = [];
+
+    for (const file of files) {
+      // Check file type (must match backend validation)
       if (!allowedTypes.includes(file.type)) {
-        errors.push(`${file.name}: Unsupported file type (${file.type})`);
-        return false;
+        errors.push(
+          `${file.name}: Unsupported file type (${file.type}). Server only accepts PDF, Word, Excel, PowerPoint, CSV, and TXT files.`
+        );
+        continue;
       }
 
-      // Check file size (10MB limit)
+      // Check file size (10MB limit - matches backend)
       if (file.size > 10 * 1024 * 1024) {
         errors.push(
           `${file.name}: File too large (${formatFileSize(
             file.size
-          )}). Maximum size is 10MB.`
+          )}). Server maximum is 10MB.`
         );
-        return false;
+        continue;
       }
 
       // Check for duplicates
@@ -140,14 +148,16 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
             existingFile.name === file.name && existingFile.size === file.size
         )
       ) {
-        errors.push(`${file.name}: File already uploaded`);
-        return false;
+        errors.push(`${file.name}: File already selected for upload`);
+        continue;
       }
 
-      return true;
-    });
+      // File passed validation
+      validFiles.push(file);
+    }
 
     setUploadErrors(errors);
+    setIsValidating(false);
 
     if (validFiles.length > 0 && onFilesUpload) {
       onFilesUpload(validFiles);
@@ -206,6 +216,10 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
       {/* Error Messages */}
       {uploadErrors.length > 0 && (
         <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-red-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            Validation Errors:
+          </h4>
           {uploadErrors.map((error, index) => (
             <div
               key={index}
@@ -215,6 +229,10 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           ))}
+          <p className="text-xs text-red-600">
+            These files won't be uploaded to the server. Fix issues and try
+            again.
+          </p>
         </div>
       )}
 
@@ -228,7 +246,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
           isDragging
             ? "border-blue-500 bg-blue-50 scale-[1.02]"
             : "border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-        }`}
+        } ${isValidating ? "pointer-events-none opacity-75" : ""}`}
       >
         <input
           ref={fileInputRef}
@@ -237,34 +255,49 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
           accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.ppt,.pptx"
           onChange={handleFileInput}
           className="hidden"
+          disabled={isValidating}
         />
 
         <div className="space-y-4">
           {/* Upload Icon */}
           <div
             className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-              isDragging ? "bg-blue-100" : "bg-gray-100"
+              isValidating
+                ? "bg-gray-100"
+                : isDragging
+                ? "bg-blue-100"
+                : "bg-gray-100"
             }`}
           >
-            <Upload
-              className={`w-8 h-8 transition-colors ${
-                isDragging ? "text-blue-600" : "text-gray-600"
-              }`}
-            />
+            {isValidating ? (
+              <Loader2 className="w-8 h-8 text-gray-600 animate-spin" />
+            ) : (
+              <Upload
+                className={`w-8 h-8 transition-colors ${
+                  isDragging ? "text-blue-600" : "text-gray-600"
+                }`}
+              />
+            )}
           </div>
 
           {/* Upload Text */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {isDragging ? "Drop files here" : "Upload Documents"}
+              {isValidating
+                ? "Validating Files..."
+                : isDragging
+                ? "Drop files here"
+                : "Upload Documents"}
             </h3>
             <p className="text-sm text-gray-600 mb-1">
-              {isDragging
-                ? "Release to upload your files"
+              {isValidating
+                ? "Checking files against server requirements..."
+                : isDragging
+                ? "Release to select your files"
                 : "Drag and drop files here, or click to browse"}
             </p>
             <p className="text-xs text-gray-500">
-              Maximum file size: 10MB per file
+              Maximum file size: 10MB per file (server limit)
             </p>
           </div>
 
@@ -297,7 +330,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <h4 className="text-sm font-semibold text-gray-900">
-                Uploaded Files ({uploadedFiles.length})
+                Selected Files ({uploadedFiles.length})
               </h4>
             </div>
             <button
@@ -348,7 +381,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        Ready to visualize
+                        Ready for server upload
                       </span>
                     </div>
                   </div>
@@ -375,7 +408,7 @@ const FileUpload = ({ onFilesUpload, onFileRemove, uploadedFiles }) => {
               <CheckCircle2 className="w-4 h-4 text-green-600" />
               <span className="text-sm font-medium text-green-800">
                 {uploadedFiles.length} file{uploadedFiles.length > 1 ? "s" : ""}{" "}
-                ready for visualization
+                ready for server upload
               </span>
             </div>
             <span className="text-xs text-green-600">

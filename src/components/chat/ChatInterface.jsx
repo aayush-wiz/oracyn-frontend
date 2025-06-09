@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useAuth } from "../../hooks/useAuth.js";
-import { authAPI } from "../../services/api.js";
+import { useState, useRef, useEffect } from "react";
+// import { useAuth } from "../../hooks/useAuth.js";
 import {
   Send,
   User,
@@ -8,7 +7,6 @@ import {
   FileText,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   ArrowLeft,
   FileSpreadsheet,
@@ -17,76 +15,66 @@ import {
 } from "lucide-react";
 
 const ChatInterface = ({
-  selectedChatId,
+//   selectedChatId,
   initialQuery,
   uploadedFiles = [],
   onGoBack,
 }) => {
-  const { token } = useAuth();
+//   const { token, user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Load existing messages from backend when component mounts
+  // Initialize chat with the first query
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!selectedChatId || !token) return;
+    if (initialQuery && messages.length === 0) {
+      // Add user's initial query
+      const userMessage = {
+        id: Date.now(),
+        sender: "USER",
+        content: initialQuery,
+        type: "QUERY",
+        createdAt: new Date().toISOString(),
+      };
 
-      try {
-        setLoadingMessages(true);
-        setError(null);
+      // Simulate AI response
+      const aiResponse = {
+        id: Date.now() + 1,
+        sender: "ASSISTANT",
+        content: `I've analyzed your query "${initialQuery}" along with the ${
+          uploadedFiles.length
+        } document${
+          uploadedFiles.length > 1 ? "s" : ""
+        } you uploaded. Here's what I found:
 
-        const response = await authAPI.getChatMessages(token, selectedChatId);
-        setMessages(response.messages || []);
+**Document Summary:**
+${uploadedFiles.map((file) => `• ${file.name} (${file.type})`).join("\n")}
 
-        // If this is a new chat with initial query, submit it to backend
-        if (initialQuery && response.messages.length === 0) {
-          await handleInitialQuerySubmission();
+**Analysis Results:**
+Based on the content of your documents, I can provide insights, summaries, and answer specific questions about the information contained within them. The documents have been processed and are ready for detailed analysis.
+
+**Key Findings:**
+1. Successfully processed ${uploadedFiles.length} document${
+          uploadedFiles.length > 1 ? "s" : ""
         }
-      } catch (err) {
-        console.error("Error loading messages:", err);
-        setError("Failed to load chat messages from server");
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
+2. Content is now available for question-answering
+3. You can ask follow-up questions about specific sections or request detailed summaries
 
-    loadMessages();
-  }, [handleInitialQuerySubmission, initialQuery, selectedChatId, token]);
+How would you like me to help you further analyze these documents?`,
+        type: "RESPONSE",
+        createdAt: new Date(Date.now() + 2000).toISOString(),
+      };
 
-  // Submit initial query to backend
-  const handleInitialQuerySubmission = useCallback(() => {
-    async () => {
-      if (!initialQuery || !selectedChatId || !token) return;
+      setMessages([userMessage]);
 
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Submit query to backend - this creates USER and ASSISTANT messages
-        const response = await authAPI.submitQuery(
-          token,
-          selectedChatId,
-          initialQuery
-        );
-
-        // Add both messages to state
-        setMessages([response.query, response.response]);
-
-        // Update chat state to CHAT in backend
-        await authAPI.updateChatState(token, selectedChatId, "CHAT");
-      } catch (err) {
-        console.error("Error submitting initial query:", err);
-        setError("Failed to submit query to server");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  }, [initialQuery, selectedChatId, token]);
+      // Simulate typing delay for AI response
+      setTimeout(() => {
+        setMessages((prev) => [...prev, aiResponse]);
+      }, 1500);
+    }
+  }, [initialQuery, uploadedFiles, messages.length]);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -101,38 +89,62 @@ const ChatInterface = ({
     }
   }, [currentMessage]);
 
-  // Send message to backend
   const handleSendMessage = async () => {
-    if (!currentMessage.trim() || isLoading || !selectedChatId || !token)
-      return;
+    if (!currentMessage.trim() || isLoading) return;
 
-    const messageContent = currentMessage.trim();
+    const userMessage = {
+      id: Date.now(),
+      sender: "USER",
+      content: currentMessage.trim(),
+      type: "REGULAR",
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
     setCurrentMessage("");
     setIsLoading(true);
-    setError(null);
 
-    try {
-      // Send message to backend API
-      const response = await authAPI.sendMessage(
-        token,
-        selectedChatId,
-        messageContent
-      );
+    // Simulate API call delay
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        sender: "ASSISTANT",
+        content: generateMockResponse(userMessage.content),
+        type: "RESPONSE",
+        createdAt: new Date().toISOString(),
+      };
 
-      // Backend returns both user message and AI response
-      setMessages((prev) => [
-        ...prev,
-        response.userMessage,
-        response.assistantMessage,
-      ]);
-    } catch (err) {
-      console.error("Error sending message:", err);
-      setError("Failed to send message to server");
-      // Restore the message if there was an error
-      setCurrentMessage(messageContent);
-    } finally {
+      setMessages((prev) => [...prev, aiResponse]);
       setIsLoading(false);
-    }
+    }, 2000);
+  };
+
+  const generateMockResponse = (query) => {
+    const responses = [
+      "Based on the documents you've uploaded, I can provide the following insights...",
+      "Looking at your documents, here are the key points that relate to your question...",
+      "From the analysis of your uploaded files, I found several relevant pieces of information...",
+      "After reviewing the content in your documents, I can summarize the following...",
+      "The documents contain valuable information about your query. Here's what I discovered...",
+    ];
+
+    const randomResponse =
+      responses[Math.floor(Math.random() * responses.length)];
+    return `${randomResponse}
+
+**Document References:**
+${uploadedFiles
+  .slice(0, 2)
+  .map((file) => `• Referenced from: ${file.name}`)
+  .join("\n")}
+
+**Detailed Analysis:**
+Your question "${query}" relates to several sections in the uploaded documents. I've identified relevant passages and can provide specific citations if needed.
+
+Would you like me to:
+1. Provide more detailed information about any specific aspect?
+2. Reference particular sections from your documents?
+3. Compare information across multiple documents?`;
   };
 
   const handleKeyPress = (e) => {
@@ -177,35 +189,6 @@ const ChatInterface = ({
     });
   };
 
-  const handleGoBackToUpload = async () => {
-    try {
-      // Update chat state in backend before going back
-      if (selectedChatId && token) {
-        await authAPI.updateChatState(token, selectedChatId, "UPLOAD");
-      }
-      onGoBack();
-    } catch (err) {
-      console.error("Error updating chat state:", err);
-      // Go back anyway
-      onGoBack();
-    }
-  };
-
-  if (loadingMessages) {
-    return (
-      <div className="flex flex-col h-screen bg-white">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="text-gray-600">
-              Loading chat messages from server...
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* Header */}
@@ -213,7 +196,7 @@ const ChatInterface = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={handleGoBackToUpload}
+              onClick={onGoBack}
               className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               title="Back to upload"
             >
@@ -250,22 +233,6 @@ const ChatInterface = ({
           </div>
         </div>
       </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="p-4 bg-red-50 border-b border-red-200">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertCircle className="w-4 h-4" />
-            <span className="text-sm">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -317,7 +284,7 @@ const ChatInterface = ({
             <div className="max-w-2xl px-4 py-3 rounded-2xl bg-gray-100">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                <span className="text-gray-600">Processing with server...</span>
+                <span className="text-gray-600">Analyzing documents...</span>
               </div>
             </div>
           </div>
@@ -362,7 +329,7 @@ const ChatInterface = ({
           <span>Press Shift + Enter for new line</span>
           <span className="flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3 text-green-500" />
-            Connected to server
+            Documents ready for analysis
           </span>
         </div>
       </div>

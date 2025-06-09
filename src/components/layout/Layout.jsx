@@ -1,21 +1,74 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../ui/Sidebar";
 import { Outlet } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth.js";
+import { LoadingCenter } from "../ui/Loading.jsx";
 
 const Layout = () => {
   console.log("Layout component is rendering");
 
+  const { token, user, isLoading } = useAuth();
   const [selectedAnalysisId, setSelectedAnalysisId] = useState(null);
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
 
   const handleSelectAnalysis = (analysisId) => {
     console.log("Analysis selected:", analysisId);
     setSelectedAnalysisId(analysisId);
   };
 
+  const handleCreateNewChat = () => {
+    // Generate a temporary ID for new chat (in real app, this would come from backend)
+    const newChatId = `new-chat-${Date.now()}`;
+    console.log("Creating new chat:", newChatId);
+    setSelectedAnalysisId(newChatId);
+  };
+
+  useEffect(() => {
+    // Simulate layout initialization or wait for auth to be fully ready
+    const initializeLayout = async () => {
+      // If auth is still loading, wait for it
+      if (isLoading) return;
+
+      // If we have token and user, layout is ready
+      if (token && user) {
+        // Add a small delay to ensure smooth transition
+        setTimeout(() => {
+          setIsLayoutReady(true);
+        }, 500);
+      }
+    };
+
+    initializeLayout();
+  }, [token, user, isLoading]);
+
+  // Show loading screen while auth is loading or layout is initializing
+  if (isLoading || !isLayoutReady) {
+    return (
+      <div className="flex justify-center items-center h-screen overflow-hidden">
+        <LoadingCenter
+          message="Loading your workspace..."
+          fullHeight
+          size="lg"
+          color="blue"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-[#ffffe5] flex h-screen overflow-hidden">
-      <Sidebar onSelectAnalysis={handleSelectAnalysis} />
-      <Outlet context={{ selectedAnalysisId }} />
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        onSelectAnalysis={handleSelectAnalysis}
+        onCreateNewChat={handleCreateNewChat}
+        selectedAnalysisId={selectedAnalysisId}
+      />
+      <Outlet
+        context={{
+          selectedAnalysisId,
+          onSelectAnalysis: handleSelectAnalysis,
+          onCreateNewChat: handleCreateNewChat,
+        }}
+      />
     </div>
   );
 };
