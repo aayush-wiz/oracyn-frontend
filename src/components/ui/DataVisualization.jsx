@@ -1,297 +1,677 @@
-import { useState, useRef, useEffect } from "react";
-import { GripVertical, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  FileText,
+  Download,
+  Eye,
+  Search,
+  Filter,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.js";
 import { authAPI } from "../../services/api.js";
-import { useOutletContext } from "react-router-dom";
-import PromptArea from "../interactive/PromptArea.jsx";
-import DataVisualization from "./DataVisualization.jsx";
-import ChatInterface from "../chat/ChatInterface.jsx";
-import WelcomeScreen from "./WelcomeScreen.jsx";
+import { LoadingCenter } from "../ui/Loading.jsx";
 
-const Dashboard = () => {
+const DataVisualization = ({ files = [], selectedChatId }) => {
   const { token } = useAuth();
-  const { selectedAnalysisId } = useOutletContext();
-  const [selectedChatId, setSelectedChatId] = useState(null);
-  const [filesToVisualize, setFilesToVisualize] = useState([]);
-  const [chatState, setChatState] = useState("upload"); // "upload", "chat", "visualize"
-  const [initialQuery, setInitialQuery] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [leftWidth, setLeftWidth] = useState(40);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isLoadingChatData, setIsLoadingChatData] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileContent, setFileContent] = useState(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [backendFiles, setBackendFiles] = useState([]);
   const [error, setError] = useState(null);
-  const containerRef = useRef(null);
-  const dividerRef = useRef(null);
+  const [contentError, setContentError] = useState(null);
 
-  // Load chat data from backend when selectedAnalysisId changes
+  // Load files from backend if not provided as props
   useEffect(() => {
-    const loadChatData = async () => {
-      if (selectedAnalysisId !== selectedChatId) {
-        setSelectedChatId(selectedAnalysisId);
-        setError(null);
+    const loadFilesFromBackend = async () => {
+      if (files.length > 0 || !selectedChatId || !token) return;
 
-        if (selectedAnalysisId && token) {
-          setIsLoadingChatData(true);
-          try {
-            // Get chat messages and files from backend
-            const [messagesResponse, filesResponse] = await Promise.all([
-              authAPI.getChatMessages(token, selectedAnalysisId),
-              authAPI.getChatFiles(token, selectedAnalysisId),
-            ]);
+      setIsLoadingFiles(true);
+      setError(null);
 
-            // Determine chat state based on backend data
-            if (
-              messagesResponse.messages &&
-              messagesResponse.messages.length > 0
-            ) {
-              // Chat has messages - go to chat state
-              setChatState("chat");
-              setUploadedFiles(messagesResponse.documents || []);
+      try {
+        const response = await authAPI.getChatFiles(token, selectedChatId);
+        setBackendFiles(response || []);
+      } catch (err) {
+        console.error("Error loading files from backend:", err);
+        setError("Failed to load files from server");
+        setBackendFiles([]);
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    };
 
-              // Find initial query from messages
-              const firstQuery = messagesResponse.messages.find(
-                (msg) => msg.type === "QUERY"
-              );
-              setInitialQuery(firstQuery ? firstQuery.content : "");
-            } else if (filesResponse && filesResponse.length > 0) {
-              // Chat has files but no messages - go to visualize state
-              setChatState("visualize");
-              setFilesToVisualize(filesResponse);
-              setUploadedFiles([]);
-            } else {
-              // New empty chat - go to upload state
-              setChatState("upload");
-              setInitialQuery("");
-              setUploadedFiles([]);
-              setFilesToVisualize([]);
-            }
-          } catch (err) {
-            console.error("Error loading chat data from backend:", err);
-            setError("Failed to load chat data from server");
-            // Reset to upload state on error
-            setChatState("upload");
-            setInitialQuery("");
-            setUploadedFiles([]);
-            setFilesToVisualize([]);
-          } finally {
-            setIsLoadingChatData(false);
+    loadFilesFromBackend();
+  }, [selectedChatId, token, files.length]);
+
+  // Use either prop files or backend files
+  const displayFiles = files.length > 0 ? files : backendFiles;
+
+  // Load file content from backend when a file is selected
+  useEffect(() => {
+    const loadFileContent = async () => {
+      if (!selectedFile || !token) return;
+
+      setIsLoadingContent(true);
+      setContentError(null);
+
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/files/${
+            selectedFile.id
+          }/content`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           }
-        } else {
-          // No chat selected, reset state
-          setChatState("upload");
-          setInitialQuery("");
-          setUploadedFiles([]);
-          setFilesToVisualize([]);
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to load file content: ${response.statusText}`
+          );
         }
+
+        const contentData = await response.json();
+        setFileContent(contentData);
+      } catch (error) {
+        console.error("Error loading file content:", error);
+        setContentError(`Failed to load file content: ${error.message}`);
+
+        // Fallback to generating preview info from file metadata
+        setFileContent(generateFilePreview(selectedFile));
+      } finally {
+        setIsLoadingContent(false);
       }
     };
 
-    loadChatData();
-  }, [selectedAnalysisId, selectedChatId, token]);
+    loadFileContent();
+  }, [selectedFile, token]);
 
-  // Handle file upload and visualization (backend integration)
-  const handleVisualize = async (files) => {
+  // Generate basic file preview from metadata when content can't be loaded
+  const generateFilePreview = (file) => {
+    const fileExtension = file.name.split(".").pop().toLowerCase();
+    const uploadDate = file.uploadedAt
+      ? new Date(file.uploadedAt).toLocaleDateString()
+      : "Unknown";
+
+    return {
+      type: "metadata",
+      name: file.name,
+      size: file.size,
+      uploadDate,
+      fileType: fileExtension,
+      downloadUrl: file.url,
+      metadata: {
+        extension: fileExtension,
+        mimeType: file.type,
+        sizeFormatted: formatFileSize(file.size),
+      },
+    };
+  };
+
+  // Handle file download
+  const handleDownload = async (file) => {
     try {
-      setError(null);
-      setFilesToVisualize(files);
-      setChatState("visualize");
+      if (file.url) {
+        // If file has direct URL, use it
+        const link = document.createElement("a");
+        link.href = file.url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Otherwise, request download URL from backend
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/files/${file.id}/download`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-      // Update chat state in backend
-      if (selectedChatId && token) {
-        await authAPI.updateChatState(token, selectedChatId, "VISUALIZE");
+        if (!response.ok) {
+          throw new Error("Failed to get download URL");
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
       }
-    } catch (err) {
-      console.error("Error handling visualization:", err);
-      setError("Failed to update chat state on server");
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      setError(`Failed to download file: ${error.message}`);
     }
   };
 
-  // Handle starting chat (files already uploaded to backend)
-  const handleStartChat = (query, files) => {
-    setError(null);
-    setInitialQuery(query);
-    setUploadedFiles(files);
-    setChatState("chat");
+  const getFileIcon = (type) => {
+    if (type.includes("pdf")) return "📄";
+    if (type.includes("word") || type.includes("document")) return "📝";
+    if (type.includes("sheet") || type.includes("csv")) return "📊";
+    if (type.includes("presentation")) return "📑";
+    if (type.includes("text")) return "📄";
+    if (type.includes("image")) return "🖼️";
+    return "📎";
   };
 
-  // Go back to upload mode (update backend state)
-  const handleGoBackToUpload = async () => {
-    try {
-      setError(null);
-      setChatState("upload");
-      setInitialQuery("");
-
-      // Update chat state in backend
-      if (selectedChatId && token) {
-        await authAPI.updateChatState(token, selectedChatId, "UPLOAD");
-      }
-    } catch (err) {
-      console.error("Error updating chat state:", err);
-      setError("Failed to update chat state on server");
-    }
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const handleMouseDown = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
+  const getFileTypeFromName = (fileName) => {
+    return fileName.split(".").pop().toLowerCase();
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+  const filteredFiles = displayFiles.filter((file) => {
+    const matchesSearch = file.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const fileType = file.type
+      ? file.type.split("/")[0]
+      : getFileTypeFromName(file.name);
+    const matchesFilter = filterType === "all" || fileType === filterType;
+    return matchesSearch && matchesFilter;
+  });
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging || !containerRef.current) return;
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const newLeftWidth =
-        ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      const constrainedWidth = Math.min(Math.max(newLeftWidth, 20), 80);
-      setLeftWidth(constrainedWidth);
-    };
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isDragging]);
+  const fileTypes = [
+    ...new Set(
+      displayFiles.map((file) => {
+        if (file.type) return file.type.split("/")[0];
+        const ext = getFileTypeFromName(file.name);
+        if (["pdf", "doc", "docx", "txt"].includes(ext)) return "text";
+        if (["csv", "xlsx", "xls"].includes(ext)) return "spreadsheet";
+        if (["ppt", "pptx"].includes(ext)) return "presentation";
+        if (["jpg", "jpeg", "png", "gif"].includes(ext)) return "image";
+        return "application";
+      })
+    ),
+  ];
 
-  // Show loading screen while fetching chat data from backend
-  if (isLoadingChatData) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="text-gray-600">
-            Loading chat data from server...
-          </span>
+  const renderFileContent = () => {
+    if (isLoadingContent) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <LoadingCenter message="Loading file content..." />
         </div>
+      );
+    }
+
+    if (contentError) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-8 max-w-md">
+            <AlertCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-red-600 mb-2">
+              Content Load Error
+            </h3>
+            <p className="text-sm text-red-500 mb-4">{contentError}</p>
+            {selectedFile && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">File Information:</p>
+                <p className="text-sm font-medium">{selectedFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  {formatFileSize(selectedFile.size)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (!fileContent) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-8">
+            <Eye className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-500 mb-2">
+              Select a file to preview
+            </h3>
+            <p className="text-sm text-gray-400">
+              Choose a file from the list to view its contents
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Render different content types based on backend response
+    if (fileContent.type === "pdf") {
+      return (
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">PDF Document</h3>
+              {fileContent.downloadUrl && (
+                <button
+                  onClick={() => window.open(fileContent.downloadUrl, "_blank")}
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open Original
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Pages</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {fileContent.pageCount || "N/A"}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Size</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatFileSize(fileContent.size || 0)}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Words</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {fileContent.wordCount || "N/A"}
+                </p>
+              </div>
+            </div>
+
+            {fileContent.text && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Content Preview</h4>
+                <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {fileContent.text.substring(0, 2000)}
+                    {fileContent.text.length > 2000 && "..."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {fileContent.metadata && (
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-medium mb-3">Document Metadata</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {Object.entries(fileContent.metadata).map(([key, value]) => (
+                    <div key={key}>
+                      <span className="font-medium text-gray-600">{key}:</span>
+                      <span className="ml-2 text-gray-900">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (fileContent.type === "csv" || fileContent.type === "spreadsheet") {
+      return (
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold mb-4">Spreadsheet Data</h3>
+
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Rows</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {fileContent.rowCount || "N/A"}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Columns</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {fileContent.columnCount || "N/A"}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-600">Size</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatFileSize(fileContent.size || 0)}
+                </p>
+              </div>
+            </div>
+
+            {fileContent.headers && fileContent.data && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3">Data Preview</h4>
+                <div className="overflow-x-auto bg-gray-50 rounded-lg">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        {fileContent.headers.map((header, index) => (
+                          <th
+                            key={index}
+                            className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b"
+                          >
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fileContent.data.slice(0, 10).map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border-b border-gray-200">
+                          {row.map((cell, cellIndex) => (
+                            <td
+                              key={cellIndex}
+                              className="px-4 py-2 text-sm text-gray-900"
+                            >
+                              {String(cell).substring(0, 50)}
+                              {String(cell).length > 50 && "..."}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {fileContent.rowCount > 10 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Showing 10 of {fileContent.rowCount} rows
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (fileContent.type === "text") {
+      return (
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold mb-4">Text Document</h3>
+
+            {fileContent.wordCount && (
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">Words</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {fileContent.wordCount}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">
+                    Characters
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {fileContent.charCount || "N/A"}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">Lines</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {fileContent.lineCount || "N/A"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">Content</h4>
+              <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed font-mono text-sm">
+                  {fileContent.content}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback for metadata-only view
+    if (fileContent.type === "metadata") {
+      return (
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">File Information</h3>
+              {fileContent.downloadUrl && (
+                <button
+                  onClick={() => handleDownload(selectedFile)}
+                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">File Name</p>
+                  <p className="text-lg font-semibold text-gray-900 break-all">
+                    {fileContent.name}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">File Size</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {fileContent.metadata.sizeFormatted}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">File Type</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {fileContent.fileType.toUpperCase()}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-600">
+                    Upload Date
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {fileContent.uploadDate}
+                  </p>
+                </div>
+              </div>
+
+              {fileContent.metadata && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Additional Information</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-2">
+                      MIME Type: {fileContent.metadata.mimeType}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Preview not available for this file type. Use the download
+                      button to access the file.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center p-8">
+          <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-500 mb-2">
+            Unknown file format
+          </h3>
+          <p className="text-sm text-gray-400">
+            Unable to preview this file type
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Show loading state while fetching files
+  if (isLoadingFiles) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <LoadingCenter message="Loading documents from server..." />
       </div>
     );
   }
 
-  // Show error if backend connection failed
+  // Show error state
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="text-center p-8 max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Server Connection Error
+          <AlertCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-600 mb-2">
+            Error Loading Documents
           </h3>
-          <p className="text-sm text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-red-500 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
-            Retry Connection
+            Retry
           </button>
         </div>
       </div>
     );
   }
 
-  // Render welcome screen when no chat is selected
-  if (!selectedChatId) {
-    return <WelcomeScreen />;
-  }
-
-  // Render chat interface when in chat state (full screen)
-  if (chatState === "chat") {
+  // Show empty state
+  if (displayFiles.length === 0) {
     return (
-      <ChatInterface
-        selectedChatId={selectedChatId}
-        initialQuery={initialQuery}
-        uploadedFiles={uploadedFiles}
-        onGoBack={handleGoBackToUpload}
-      />
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8">
+          <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-500 mb-2">
+            No documents to display
+          </h3>
+          <p className="text-sm text-gray-400">
+            Upload documents to see them here
+          </p>
+        </div>
+      </div>
     );
   }
 
-  // Render split pane for upload/visualize states
   return (
-    <div
-      ref={containerRef}
-      className="flex-1 flex h-screen overflow-hidden bg-gray-50 relative"
-    >
-      <div style={{ width: `${leftWidth}%` }} className="flex-shrink-0 h-full">
-        {chatState === "upload" ? (
-          <PromptArea
-            selectedChatId={selectedChatId}
-            onVisualize={handleVisualize}
-            onStartChat={handleStartChat}
-          />
-        ) : (
-          <div className="h-full flex items-center justify-center bg-gray-100">
-            <div className="text-center p-8">
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                Document Visualization Active
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Your documents are loaded from server and displayed in the
-                viewer panel
-              </p>
-              <button
-                onClick={handleGoBackToUpload}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Back to Upload
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="h-full flex bg-gray-50">
+      {/* File List Sidebar */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Documents ({displayFiles.length})
+          </h3>
 
-      <div
-        ref={dividerRef}
-        onMouseDown={handleMouseDown}
-        className={`relative w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize transition-all duration-200 flex-shrink-0 group ${
-          isDragging ? "bg-blue-500 shadow-lg" : ""
-        }`}
-      >
-        <div className="absolute inset-y-0 -left-1 -right-1 flex items-center justify-center">
-          <div
-            className={`w-3 h-16 bg-gray-400 rounded-full flex items-center justify-center transition-all duration-200 group-hover:opacity-100 ${
-              isDragging ? "opacity-100 bg-blue-500 shadow-md" : ""
-            }`}
+          {/* Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search files..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Filter */}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <GripVertical className="w-3 h-3 text-white" />
-          </div>
+            <option value="all">All types</option>
+            {fileTypes.map((type) => (
+              <option key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)} files
+              </option>
+            ))}
+          </select>
         </div>
-        {isDragging && (
-          <div className="absolute inset-y-0 left-0 w-1 opacity-30 shadow-lg">
-            <div className="absolute -left-2 -right-2 inset-y-0 bg-blue-200 opacity-30"></div>
+
+        {/* File List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredFiles.length === 0 ? (
+            <div className="p-4 text-center">
+              <p className="text-sm text-gray-500">
+                No files match your criteria
+              </p>
+            </div>
+          ) : (
+            <div className="p-2 space-y-2">
+              {filteredFiles.map((file, index) => (
+                <div
+                  key={file.id || index}
+                  onClick={() => setSelectedFile(file)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedFile?.id === file.id
+                      ? "bg-blue-50 border-blue-200 border"
+                      : "hover:bg-gray-50 border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">
+                      {getFileIcon(file.type || file.name)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(file.size)}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {file.type
+                          ? file.type.split("/")[1]?.toUpperCase()
+                          : getFileTypeFromName(file.name).toUpperCase()}
+                      </p>
+                      {file.uploadedAt && (
+                        <p className="text-xs text-gray-400">
+                          {new Date(file.uploadedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {selectedFile && (
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={() => handleDownload(selectedFile)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download File
+            </button>
           </div>
         )}
       </div>
 
-      <div
-        style={{ width: `${100 - leftWidth}%` }}
-        className="flex-shrink-0 h-full"
-      >
-        <DataVisualization
-          files={filesToVisualize}
-          selectedChatId={selectedChatId}
-        />
-      </div>
-
-      {isDragging && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute top-0 bottom-0 w-0.5 shadow-lg"
-            style={{ left: `${leftWidth}%` }}
-          ></div>
-        </div>
-      )}
+      {/* Content Viewer */}
+      {renderFileContent()}
     </div>
   );
 };
 
-export default Dashboard;
+export default DataVisualization;

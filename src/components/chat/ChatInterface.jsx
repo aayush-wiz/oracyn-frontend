@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-// import { useAuth } from "../../hooks/useAuth.js";
+import { useAuth } from "../../hooks/useAuth.js";
+import { authAPI } from "../../services/api.js";
 import {
   Send,
   User,
@@ -15,66 +16,95 @@ import {
 } from "lucide-react";
 
 const ChatInterface = ({
-//   selectedChatId,
+  selectedChatId,
   initialQuery,
   uploadedFiles = [],
   onGoBack,
 }) => {
-//   const { token, user } = useAuth();
+  const { token } = useAuth();
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Initialize chat with the first query
+  // Load existing messages from backend
   useEffect(() => {
-    if (initialQuery && messages.length === 0) {
-      // Add user's initial query
-      const userMessage = {
-        id: Date.now(),
-        sender: "USER",
-        content: initialQuery,
-        type: "QUERY",
-        createdAt: new Date().toISOString(),
-      };
+    const loadMessages = async () => {
+      if (!selectedChatId || !token) return;
 
-      // Simulate AI response
-      const aiResponse = {
-        id: Date.now() + 1,
-        sender: "ASSISTANT",
-        content: `I've analyzed your query "${initialQuery}" along with the ${
-          uploadedFiles.length
-        } document${
-          uploadedFiles.length > 1 ? "s" : ""
-        } you uploaded. Here's what I found:
+      setIsLoadingMessages(true);
+      try {
+        const response = await authAPI.getChatMessages(token, selectedChatId);
 
-**Document Summary:**
-${uploadedFiles.map((file) => `• ${file.name} (${file.type})`).join("\n")}
+        // Convert backend messages to frontend format
+        const formattedMessages =
+          response.messages?.map((msg) => ({
+            id: msg.id,
+            sender: msg.sender,
+            content: msg.content,
+            type: msg.type,
+            createdAt: msg.createdAt || new Date().toISOString(),
+          })) || [];
 
-**Analysis Results:**
-Based on the content of your documents, I can provide insights, summaries, and answer specific questions about the information contained within them. The documents have been processed and are ready for detailed analysis.
+        setMessages(formattedMessages);
 
-**Key Findings:**
-1. Successfully processed ${uploadedFiles.length} document${
-          uploadedFiles.length > 1 ? "s" : ""
+        // If no messages but we have an initial query, create the initial conversation
+        if (formattedMessages.length === 0 && initialQuery) {
+          const userMessage = {
+            id: Date.now(),
+            sender: "USER",
+            content: initialQuery,
+            type: "QUERY",
+            createdAt: new Date().toISOString(),
+          };
+
+          setMessages([userMessage]);
+
+          // Send initial query to backend
+          try {
+            await authAPI.sendMessage(
+              token,
+              selectedChatId,
+              initialQuery,
+              "QUERY"
+            );
+
+            // Simulate AI response for now - in real implementation,
+            // this would come from your AI service
+            setTimeout(async () => {
+              const aiResponse = {
+                id: Date.now() + 1,
+                sender: "ASSISTANT",
+                content: generateInitialResponse(initialQuery, uploadedFiles),
+                type: "RESPONSE",
+                createdAt: new Date().toISOString(),
+              };
+
+              setMessages((prev) => [...prev, aiResponse]);
+
+              // Save AI response to backend
+              await authAPI.sendMessage(
+                token,
+                selectedChatId,
+                aiResponse.content,
+                "RESPONSE"
+              );
+            }, 1500);
+          } catch (error) {
+            console.error("Error sending initial query:", error);
+          }
         }
-2. Content is now available for question-answering
-3. You can ask follow-up questions about specific sections or request detailed summaries
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
 
-How would you like me to help you further analyze these documents?`,
-        type: "RESPONSE",
-        createdAt: new Date(Date.now() + 2000).toISOString(),
-      };
-
-      setMessages([userMessage]);
-
-      // Simulate typing delay for AI response
-      setTimeout(() => {
-        setMessages((prev) => [...prev, aiResponse]);
-      }, 1500);
-    }
-  }, [initialQuery, uploadedFiles, messages.length]);
+    loadMessages();
+  }, [selectedChatId, token, initialQuery, uploadedFiles]);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -89,8 +119,57 @@ How would you like me to help you further analyze these documents?`,
     }
   }, [currentMessage]);
 
+  const generateInitialResponse = (query, files) => {
+    return `I've analyzed your query "${query}" along with the ${
+      files.length
+    } document${files.length > 1 ? "s" : ""} you uploaded. Here's what I found:
+
+**Document Summary:**
+${files.map((file) => `• ${file.name} (${file.type})`).join("\n")}
+
+**Analysis Results:**
+Based on the content of your documents, I can provide insights, summaries, and answer specific questions about the information contained within them. The documents have been processed and are ready for detailed analysis.
+
+**Key Findings:**
+1. Successfully processed ${files.length} document${files.length > 1 ? "s" : ""}
+2. Content is now available for question-answering
+3. You can ask follow-up questions about specific sections or request detailed summaries
+
+How would you like me to help you further analyze these documents?`;
+  };
+
+  const generateFollowUpResponse = (query, files) => {
+    const responses = [
+      "Based on the documents you've uploaded, I can provide the following insights...",
+      "Looking at your documents, here are the key points that relate to your question...",
+      "From the analysis of your uploaded files, I found several relevant pieces of information...",
+      "After reviewing the content in your documents, I can summarize the following...",
+      "The documents contain valuable information about your query. Here's what I discovered...",
+    ];
+
+    const randomResponse =
+      responses[Math.floor(Math.random() * responses.length)];
+
+    return `${randomResponse}
+
+**Document References:**
+${files
+  .slice(0, 2)
+  .map((file) => `• Referenced from: ${file.name}`)
+  .join("\n")}
+
+**Detailed Analysis:**
+Your question "${query}" relates to several sections in the uploaded documents. I've identified relevant passages and can provide specific citations if needed.
+
+Would you like me to:
+1. Provide more detailed information about any specific aspect?
+2. Reference particular sections from your documents?
+3. Compare information across multiple documents?`;
+  };
+
   const handleSendMessage = async () => {
-    if (!currentMessage.trim() || isLoading) return;
+    if (!currentMessage.trim() || isLoading || !selectedChatId || !token)
+      return;
 
     const userMessage = {
       id: Date.now(),
@@ -104,47 +183,45 @@ How would you like me to help you further analyze these documents?`,
     setCurrentMessage("");
     setIsLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        sender: "ASSISTANT",
-        content: generateMockResponse(userMessage.content),
-        type: "RESPONSE",
-        createdAt: new Date().toISOString(),
-      };
+    try {
+      // Send message to backend
+      await authAPI.sendMessage(
+        token,
+        selectedChatId,
+        userMessage.content,
+        "REGULAR"
+      );
 
-      setMessages((prev) => [...prev, aiResponse]);
+      // Simulate AI response - in real implementation, this would be your AI service
+      setTimeout(async () => {
+        const aiResponse = {
+          id: Date.now() + 1,
+          sender: "ASSISTANT",
+          content: generateFollowUpResponse(userMessage.content, uploadedFiles),
+          type: "RESPONSE",
+          createdAt: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, aiResponse]);
+
+        // Save AI response to backend
+        try {
+          await authAPI.sendMessage(
+            token,
+            selectedChatId,
+            aiResponse.content,
+            "RESPONSE"
+          );
+        } catch (error) {
+          console.error("Error saving AI response:", error);
+        }
+
+        setIsLoading(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Error sending message:", error);
       setIsLoading(false);
-    }, 2000);
-  };
-
-  const generateMockResponse = (query) => {
-    const responses = [
-      "Based on the documents you've uploaded, I can provide the following insights...",
-      "Looking at your documents, here are the key points that relate to your question...",
-      "From the analysis of your uploaded files, I found several relevant pieces of information...",
-      "After reviewing the content in your documents, I can summarize the following...",
-      "The documents contain valuable information about your query. Here's what I discovered...",
-    ];
-
-    const randomResponse =
-      responses[Math.floor(Math.random() * responses.length)];
-    return `${randomResponse}
-
-**Document References:**
-${uploadedFiles
-  .slice(0, 2)
-  .map((file) => `• Referenced from: ${file.name}`)
-  .join("\n")}
-
-**Detailed Analysis:**
-Your question "${query}" relates to several sections in the uploaded documents. I've identified relevant passages and can provide specific citations if needed.
-
-Would you like me to:
-1. Provide more detailed information about any specific aspect?
-2. Reference particular sections from your documents?
-3. Compare information across multiple documents?`;
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -188,6 +265,35 @@ Would you like me to:
       minute: "2-digit",
     });
   };
+
+  if (isLoadingMessages) {
+    return (
+      <div className="flex flex-col h-screen bg-white">
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onGoBack}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Back to upload"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Document Analysis Chat
+              </h2>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="text-gray-600">Loading chat messages...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-white">

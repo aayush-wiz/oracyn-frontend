@@ -17,10 +17,9 @@ const Layout = () => {
   };
 
   const handleCreateNewChat = () => {
-    // Generate a temporary ID for new chat (in real app, this would come from backend)
-    const newChatId = `new-chat-${Date.now()}`;
-    console.log("Creating new chat:", newChatId);
-    setSelectedAnalysisId(newChatId);
+    // This will be handled by the Sidebar component directly
+    // but we keep this method for potential future use
+    console.log("Create new chat triggered from layout");
   };
 
   useEffect(() => {
@@ -59,7 +58,6 @@ const Layout = () => {
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         onSelectAnalysis={handleSelectAnalysis}
-        onCreateNewChat={handleCreateNewChat}
         selectedAnalysisId={selectedAnalysisId}
       />
       <Outlet

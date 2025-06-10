@@ -19,11 +19,9 @@ import ChatItem from "../interactive/ChatItem.jsx";
 import AllChatsModal from "../modals/AllChatModal.jsx";
 import StarredChatsModal from "../modals/StarredChatModal.jsx";
 import SavedAnalysesModal from "../modals/SavedAnalysesModal.jsx";
-import Loading, {
-  LoadingCenter,
-} from "./Loading.jsx";
+import Loading, { LoadingCenter } from "./Loading.jsx";
 
-const Sidebar = ({ onSelectAnalysis }) => {
+const Sidebar = ({ onSelectAnalysis, selectedAnalysisId }) => {
   const { user, token, logout } = useAuth();
   const [chats, setChats] = useState([]);
   const [isSavedAnalysesOpen, setIsSavedAnalysesOpen] = useState(false);
@@ -59,6 +57,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
             name: chat.title || "Untitled Chat",
             isEmpty: !chat.documents?.length && !chat.messages?.length,
             isStarred: chat.status === "STARRED",
+            status: chat.status,
           }))
         );
       } catch (error) {
@@ -110,6 +109,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
         name: newChat.title || uniqueName,
         isEmpty: true,
         isStarred: false,
+        status: "NONE",
       };
 
       setChats([newChatData, ...chats]);
@@ -127,18 +127,39 @@ const Sidebar = ({ onSelectAnalysis }) => {
     setIsSettingsModalOpen(false);
   };
 
-  const handleStarChat = (chatId) => {
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === chatId ? { ...chat, isStarred: !chat.isStarred } : chat
-      )
-    );
-    setOpenChatOptionId(null);
+  const handleStarChat = async (chatId) => {
+    try {
+      const chat = chats.find((c) => c.id === chatId);
+      const newStatus = chat.isStarred ? "NONE" : "STARRED";
+
+      await authAPI.updateChat(token, chatId, { status: newStatus });
+
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === chatId
+            ? { ...chat, isStarred: !chat.isStarred, status: newStatus }
+            : chat
+        )
+      );
+      setOpenChatOptionId(null);
+    } catch (error) {
+      console.error("Error starring chat:", error);
+    }
   };
 
-  const handleDeleteChat = (chatId) => {
-    setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
-    setOpenChatOptionId(null);
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await authAPI.deleteChat(token, chatId);
+      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+      setOpenChatOptionId(null);
+
+      // If deleted chat was selected, clear selection
+      if (selectedAnalysisId === chatId) {
+        onSelectAnalysis?.(null);
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
   };
 
   const handleStartRename = (chatId, currentName) => {
@@ -147,7 +168,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
     setOpenChatOptionId(null);
   };
 
-  const handleSaveRename = (chatId) => {
+  const handleSaveRename = async (chatId) => {
     const trimmedName = editingName.trim();
 
     if (!trimmedName) {
@@ -156,29 +177,32 @@ const Sidebar = ({ onSelectAnalysis }) => {
       return;
     }
 
-    // Check for duplicate names (excluding the current chat being renamed)
-    const existingNames = chats
-      .filter((chat) => chat.id !== chatId)
-      .map((chat) => chat.name.toLowerCase());
+    try {
+      // Check for duplicate names (excluding the current chat being renamed)
+      const existingNames = chats
+        .filter((chat) => chat.id !== chatId)
+        .map((chat) => chat.name.toLowerCase());
 
-    if (existingNames.includes(trimmedName.toLowerCase())) {
-      // If duplicate name exists, generate a unique one
-      const uniqueName = generateUniqueChatName(trimmedName);
+      let finalName = trimmedName;
+      if (existingNames.includes(trimmedName.toLowerCase())) {
+        // If duplicate name exists, generate a unique one
+        finalName = generateUniqueChatName(trimmedName);
+      }
+
+      await authAPI.updateChat(token, chatId, { title: finalName });
+
       setChats((prevChats) =>
         prevChats.map((chat) =>
-          chat.id === chatId ? { ...chat, name: uniqueName } : chat
+          chat.id === chatId ? { ...chat, name: finalName } : chat
         )
       );
-    } else {
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === chatId ? { ...chat, name: trimmedName } : chat
-        )
-      );
+
+      setEditingChatId(null);
+      setEditingName("");
+    } catch (error) {
+      console.error("Error renaming chat:", error);
+      handleCancelRename();
     }
-
-    setEditingChatId(null);
-    setEditingName("");
   };
 
   const handleCancelRename = () => {
@@ -249,9 +273,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
   );
   const starredChats = filteredChats.filter((chat) => chat.isStarred);
   const regularChats = filteredChats.filter((chat) => !chat.isStarred);
-
-  // Show loading overlay when creating chat
-  // Remove this section completely as we'll handle loading in the button
+  const savedChats = chats.filter((chat) => chat.status === "SAVED");
 
   return (
     <div
@@ -585,7 +607,7 @@ const Sidebar = ({ onSelectAnalysis }) => {
         isOpen={isSavedAnalysesOpen}
         onClose={() => setIsSavedAnalysesOpen(false)}
         onSelectAnalysis={onSelectAnalysis}
-        chats={chats.filter((chat) => chat.status === "SAVED")}
+        chats={savedChats}
       />
       <AllChatsModal
         isOpen={isAllChatsModalOpen}

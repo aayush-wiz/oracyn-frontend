@@ -1,373 +1,347 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useState } from "react";
+import {
+  MoreHorizontal,
+  Star,
+  Edit3,
+  Trash2,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useAuth } from "../../hooks/useAuth.js";
 import { authAPI } from "../../services/api.js";
-import {
-  Send,
-  User,
-  Bot,
-  FileText,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  ArrowLeft,
-  FileSpreadsheet,
-  Presentation,
-  File,
-} from "lucide-react";
 
-const ChatInterface = ({
-  selectedChatId,
-  initialQuery,
-  uploadedFiles = [],
-  onGoBack,
+const ChatItem = ({
+  chat,
+  isEditing,
+  editingName,
+  onEdit,
+  onSave,
+  onStar,
+  onDelete,
+  openOptionsId,
+  setOpenOptionsId,
+  setEditingName,
+  isLast,
+  onClick,
 }) => {
   const { token } = useAuth();
-  const [messages, setMessages] = useState([]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const [error, setError] = useState(null);
-  const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
+  const buttonRef = useRef(null);
 
-  // Load existing messages from backend when component mounts
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!selectedChatId || !token) return;
+  // Local loading states for individual actions
+  const [isStarring, setIsStarring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
-      try {
-        setLoadingMessages(true);
-        setError(null);
+  // Optimistic update state
+  const [optimisticState, setOptimisticState] = useState({
+    isStarred: chat.isStarred,
+    name: chat.name,
+  });
 
-        const response = await authAPI.getChatMessages(token, selectedChatId);
-        setMessages(response.messages || []);
+  const handleToggleOptions = (e) => {
+    e.stopPropagation();
+    setOpenOptionsId(openOptionsId === chat.id ? null : chat.id);
+    setActionError(null); // Clear any previous errors
+  };
 
-        // If this is a new chat with initial query, submit it to backend
-        if (initialQuery && response.messages.length === 0) {
-          await handleInitialQuerySubmission();
-        }
-      } catch (err) {
-        console.error("Error loading messages:", err);
-        setError("Failed to load chat messages from server");
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
+  const handleStar = async (e) => {
+    e.stopPropagation();
 
-    loadMessages();
-  }, [handleInitialQuerySubmission, initialQuery, selectedChatId, token]);
+    if (isStarring) return; // Prevent double-clicks
 
-  // Submit initial query to backend
-  const handleInitialQuerySubmission = useCallback(() => {
-    async () => {
-      if (!initialQuery || !selectedChatId || !token) return;
+    setIsStarring(true);
+    setActionError(null);
 
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Submit query to backend - this creates USER and ASSISTANT messages
-        const response = await authAPI.submitQuery(
-          token,
-          selectedChatId,
-          initialQuery
-        );
-
-        // Add both messages to state
-        setMessages([response.query, response.response]);
-
-        // Update chat state to CHAT in backend
-        await authAPI.updateChatState(token, selectedChatId, "CHAT");
-      } catch (err) {
-        console.error("Error submitting initial query:", err);
-        setError("Failed to submit query to server");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  }, [initialQuery, selectedChatId, token]);
-
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [currentMessage]);
-
-  // Send message to backend
-  const handleSendMessage = async () => {
-    if (!currentMessage.trim() || isLoading || !selectedChatId || !token)
-      return;
-
-    const messageContent = currentMessage.trim();
-    setCurrentMessage("");
-    setIsLoading(true);
-    setError(null);
+    // Optimistic update
+    const previousState = optimisticState.isStarred;
+    setOptimisticState((prev) => ({ ...prev, isStarred: !prev.isStarred }));
 
     try {
-      // Send message to backend API
-      const response = await authAPI.sendMessage(
-        token,
-        selectedChatId,
-        messageContent
-      );
+      const newStatus = chat.isStarred ? "NONE" : "STARRED";
+      await authAPI.updateChat(token, chat.id, { status: newStatus });
 
-      // Backend returns both user message and AI response
-      setMessages((prev) => [
-        ...prev,
-        response.userMessage,
-        response.assistantMessage,
-      ]);
+      // Call parent handler to update the main state
+      await onStar(chat.id);
+
+      setOpenOptionsId(null);
     } catch (err) {
-      console.error("Error sending message:", err);
-      setError("Failed to send message to server");
-      // Restore the message if there was an error
-      setCurrentMessage(messageContent);
+      console.error("Error starring chat:", err);
+
+      // Rollback optimistic update
+      setOptimisticState((prev) => ({ ...prev, isStarred: previousState }));
+      setActionError(
+        `Failed to ${chat.isStarred ? "unstar" : "star"} chat: ${err.message}`
+      );
     } finally {
-      setIsLoading(false);
+      setIsStarring(false);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+
+    if (isDeleting) return; // Prevent double-clicks
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${chat.name}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setActionError(null);
+
+    try {
+      await authAPI.deleteChat(token, chat.id);
+
+      // Call parent handler to update the main state
+      await onDelete(chat.id);
+
+      setOpenOptionsId(null);
+    } catch (err) {
+      console.error("Error deleting chat:", err);
+      setActionError(`Failed to delete chat: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleStartEdit = (e) => {
+    e.stopPropagation();
+    onEdit(chat.id, chat.name);
+    setActionError(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (isRenaming) return; // Prevent double-saves
+
+    const trimmedName = editingName.trim();
+
+    if (!trimmedName) {
+      setActionError("Chat name cannot be empty");
+      return;
+    }
+
+    if (trimmedName === chat.name) {
+      // No change, just cancel
+      onEdit(null, "");
+      return;
+    }
+
+    setIsRenaming(true);
+    setActionError(null);
+
+    // Optimistic update
+    const previousName = optimisticState.name;
+    setOptimisticState((prev) => ({ ...prev, name: trimmedName }));
+
+    try {
+      await authAPI.updateChat(token, chat.id, { title: trimmedName });
+
+      // Call parent handler to update the main state
+      await onSave(chat.id);
+    } catch (err) {
+      console.error("Error renaming chat:", err);
+
+      // Rollback optimistic update
+      setOptimisticState((prev) => ({ ...prev, name: previousName }));
+      setActionError(`Failed to rename chat: ${err.message}`);
+    } finally {
+      setIsRenaming(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      handleSendMessage();
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onEdit(null, "");
+      setActionError(null);
     }
   };
 
-  const getFileIcon = (file) => {
-    if (file.type === "application/pdf")
-      return <FileText className="w-4 h-4 text-red-500" />;
-    if (
-      file.type === "application/msword" ||
-      file.type ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
-      return <FileText className="w-4 h-4 text-blue-500" />;
-    if (
-      file.type === "application/vnd.ms-excel" ||
-      file.type ===
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-      return <FileSpreadsheet className="w-4 h-4 text-green-500" />;
-    if (file.type === "text/csv")
-      return <FileSpreadsheet className="w-4 h-4 text-emerald-500" />;
-    if (
-      file.type === "application/vnd.ms-powerpoint" ||
-      file.type ===
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    )
-      return <Presentation className="w-4 h-4 text-orange-500" />;
-    if (file.type === "text/plain")
-      return <FileText className="w-4 h-4 text-gray-500" />;
-    return <File className="w-4 h-4 text-gray-500" />;
-  };
-
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const handleGoBackToUpload = async () => {
-    try {
-      // Update chat state in backend before going back
-      if (selectedChatId && token) {
-        await authAPI.updateChatState(token, selectedChatId, "UPLOAD");
-      }
-      onGoBack();
-    } catch (err) {
-      console.error("Error updating chat state:", err);
-      // Go back anyway
-      onGoBack();
+  const handleInputBlur = () => {
+    // Only save if we're not already saving
+    if (!isRenaming) {
+      handleSaveEdit();
     }
   };
 
-  if (loadingMessages) {
-    return (
-      <div className="flex flex-col h-screen bg-white">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="text-gray-600">
-              Loading chat messages from server...
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleChatClick = () => {
+    if (isEditing || isDeleting || isStarring) return; // Prevent clicks during operations
+    onClick?.(chat.id);
+  };
+
+  const getModalPosition = () => {
+    if (!buttonRef.current) return { top: 0, left: 0 };
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const modalHeight = 160; // Increased to account for potential error message
+    const modalWidth = 160;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceToRight = viewportWidth - rect.left;
+
+    let top, left;
+
+    // Determine vertical position
+    if (isLast || spaceBelow < modalHeight + 20) {
+      top = rect.top + window.scrollY - modalHeight - 4;
+    } else {
+      top = rect.bottom + window.scrollY + 4;
+    }
+
+    // Determine horizontal position
+    if (spaceToRight < modalWidth + 20) {
+      left = rect.right + window.scrollX - modalWidth;
+    } else {
+      left = rect.left + window.scrollX;
+    }
+
+    return { top, left };
+  };
+
+  const modalPosition = getModalPosition();
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleGoBackToUpload}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-              title="Back to upload"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Document Analysis Chat
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>{uploadedFiles.length} documents loaded</span>
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-              </div>
+    <>
+      <div className="group" onClick={handleChatClick}>
+        <div
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+            openOptionsId === chat.id ? "bg-gray-100" : "hover:bg-gray-50"
+          } ${
+            isDeleting || isStarring ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
+          {isEditing ? (
+            <div className="flex-1">
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={handleInputBlur}
+                onKeyDown={handleKeyPress}
+                className="w-full text-sm bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                disabled={isRenaming}
+              />
+              {isRenaming && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                  <span className="text-xs text-blue-600">Saving...</span>
+                </div>
+              )}
+              {actionError && (
+                <div className="flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3 text-red-500" />
+                  <span className="text-xs text-red-600">{actionError}</span>
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Document indicators */}
-          <div className="flex items-center gap-2">
-            {uploadedFiles.slice(0, 3).map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"
-                title={file.name}
+          ) : (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {optimisticState.name}
+                </div>
+                {chat.isEmpty && (
+                  <div className="text-xs text-gray-500">New analysis</div>
+                )}
+                {(isStarring || isDeleting) && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-gray-500" />
+                    <span className="text-xs text-gray-500">
+                      {isStarring
+                        ? optimisticState.isStarred
+                          ? "Starring..."
+                          : "Unstarring..."
+                        : "Deleting..."}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                ref={buttonRef}
+                data-chat-button={chat.id}
+                onClick={handleToggleOptions}
+                disabled={isStarring || isDeleting || isRenaming}
+                className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded hover:bg-gray-200 flex items-center justify-center transition-all disabled:opacity-50"
               >
-                {getFileIcon(file)}
-                <span className="max-w-16 truncate">{file.name}</span>
-              </div>
-            ))}
-            {uploadedFiles.length > 3 && (
-              <div className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                +{uploadedFiles.length - 3} more
-              </div>
-            )}
-          </div>
+                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="p-4 bg-red-50 border-b border-red-200">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertCircle className="w-4 h-4" />
-            <span className="text-sm">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
-            >
-              ×
-            </button>
-          </div>
+      {openOptionsId === chat.id && !isEditing && (
+        <div
+          data-chat-modal={chat.id}
+          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[9999] min-w-[140px]"
+          style={{
+            top: `${modalPosition.top}px`,
+            left: `${modalPosition.left}px`,
+          }}
+        >
+          {actionError && (
+            <div className="px-4 py-2 bg-red-50 border-b border-red-100">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span className="text-xs text-red-600">{actionError}</span>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleStar}
+            disabled={isStarring || isDeleting}
+            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left disabled:opacity-50"
+          >
+            {isStarring ? (
+              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            ) : (
+              <Star
+                className={`w-4 h-4 ${
+                  optimisticState.isStarred
+                    ? "text-yellow-500 fill-current"
+                    : "text-gray-400"
+                }`}
+              />
+            )}
+            {optimisticState.isStarred ? "Unstar" : "Star"}
+          </button>
+
+          <button
+            onClick={handleStartEdit}
+            disabled={isStarring || isDeleting || isRenaming}
+            className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full text-left disabled:opacity-50"
+          >
+            <Edit3 className="w-4 h-4 text-gray-400" />
+            Rename
+          </button>
+
+          <div className="border-t border-gray-100 my-1"></div>
+
+          <button
+            onClick={handleDelete}
+            disabled={isStarring || isDeleting || isRenaming}
+            className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left disabled:opacity-50"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            Delete
+          </button>
         </div>
       )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex gap-3 ${
-              message.sender === "USER" ? "justify-end" : "justify-start"
-            }`}
-          >
-            {message.sender === "ASSISTANT" && (
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-            )}
-
-            <div
-              className={`max-w-2xl px-4 py-3 rounded-2xl ${
-                message.sender === "USER"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-900"
-              }`}
-            >
-              <div className="whitespace-pre-wrap">{message.content}</div>
-              <div
-                className={`text-xs mt-2 flex items-center gap-1 ${
-                  message.sender === "USER" ? "text-blue-200" : "text-gray-500"
-                }`}
-              >
-                <Clock className="w-3 h-3" />
-                {formatTime(message.createdAt)}
-              </div>
-            </div>
-
-            {message.sender === "USER" && (
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-gray-600" />
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
-            <div className="max-w-2xl px-4 py-3 rounded-2xl bg-gray-100">
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
-                <span className="text-gray-600">Processing with server...</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask questions about your documents..."
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-2xl resize-none outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 max-h-32"
-              rows="1"
-              disabled={isLoading}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!currentMessage.trim() || isLoading}
-              className={`absolute bottom-2 right-2 p-2 rounded-xl transition-all ${
-                !currentMessage.trim() || isLoading
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-          <span>Press Shift + Enter for new line</span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
-            Connected to server
-          </span>
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 
-export default ChatInterface;
+export default ChatItem;

@@ -107,11 +107,24 @@ const Dashboard = () => {
   };
 
   // Handle starting chat (files already uploaded to backend)
-  const handleStartChat = (query, files) => {
-    setError(null);
-    setInitialQuery(query);
-    setUploadedFiles(files);
-    setChatState("chat");
+  const handleStartChat = async (query, files) => {
+    try {
+      setError(null);
+      setInitialQuery(query);
+      setUploadedFiles(files);
+      setChatState("chat");
+
+      // Submit initial query to backend and update chat state
+      if (selectedChatId && token) {
+        await Promise.all([
+          authAPI.submitQuery(token, selectedChatId, query),
+          authAPI.updateChatState(token, selectedChatId, "CHAT"),
+        ]);
+      }
+    } catch (err) {
+      console.error("Error starting chat:", err);
+      setError("Failed to start chat with server");
+    }
   };
 
   // Go back to upload mode (update backend state)
@@ -219,7 +232,7 @@ const Dashboard = () => {
   return (
     <div
       ref={containerRef}
-      className="flex-1 flex h-screen overflow-hidden bg-gray-50 relative"
+      className="flex-1 flex h-screen overflow-auto bg-gray-50 relative"
     >
       <div style={{ width: `${leftWidth}%` }} className="flex-shrink-0 h-full">
         {chatState === "upload" ? (
