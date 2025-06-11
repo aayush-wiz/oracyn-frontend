@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@reference "tailwindcss/utilities";
+
 /* Uncomment the line below if you want to use local font files */
 @import "./assets/fonts/fonts.css";
 

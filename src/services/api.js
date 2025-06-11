@@ -1,5 +1,16 @@
 // services/api.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+
+const handleResponse = async (response) => {
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Network error" }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+};
 
 export const authAPI = {
   // Authentication
@@ -11,11 +22,7 @@ export const authAPI = {
       },
       body: JSON.stringify({ email, password }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Login failed");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   signup: async (firstName, lastName, email, password) => {
@@ -26,11 +33,7 @@ export const authAPI = {
       },
       body: JSON.stringify({ firstName, lastName, email, password }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Signup failed");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   // User Profile
@@ -41,11 +44,7 @@ export const authAPI = {
         "Content-Type": "application/json",
       },
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to fetch profile");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   updateProfile: async (token, firstName, lastName) => {
@@ -57,14 +56,23 @@ export const authAPI = {
       },
       body: JSON.stringify({ firstName, lastName }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to update profile");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
-  // Chats - Full CRUD with backend
+  // Health check
+  healthCheck: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health`);
+      return response.ok;
+    } catch (error) {
+      console.error("Backend health check failed:", error);
+      return false;
+    }
+  },
+};
+
+export const chatAPI = {
+  // Get all chats (documents)
   getChats: async (token) => {
     const response = await fetch(`${API_BASE_URL}/api/chats`, {
       headers: {
@@ -72,13 +80,10 @@ export const authAPI = {
         "Content-Type": "application/json",
       },
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to fetch chats");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
+  // Create new chat (document session)
   createChat: async (token, title) => {
     const response = await fetch(`${API_BASE_URL}/api/chats`, {
       method: "POST",
@@ -88,13 +93,10 @@ export const authAPI = {
       },
       body: JSON.stringify({ title }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to create chat");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
+  // Update chat
   updateChat: async (token, chatId, updates) => {
     const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
       method: "PATCH",
@@ -104,13 +106,10 @@ export const authAPI = {
       },
       body: JSON.stringify(updates),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to update chat");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
+  // Delete chat
   deleteChat: async (token, chatId) => {
     const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
       method: "DELETE",
@@ -119,51 +118,10 @@ export const authAPI = {
         "Content-Type": "application/json",
       },
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to delete chat");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
-  // Chat Files - Backend R2 storage integration
-  getChatFiles: async (token, chatId) => {
-    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/files`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(
-        error.message || "Failed to fetch chat files from server"
-      );
-    }
-    return response.json();
-  },
-
-  // File Upload - Direct to backend R2 storage
-  uploadFile: async (token, chatId, file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Don't set Content-Type for FormData, browser sets it with boundary
-      },
-      body: formData,
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to upload file to server");
-    }
-    return response.json();
-  },
-
-  // Chat Messages - Real backend message storage
+  // Get chat messages
   getChatMessages: async (token, chatId) => {
     const response = await fetch(
       `${API_BASE_URL}/api/chats/${chatId}/messages`,
@@ -174,13 +132,10 @@ export const authAPI = {
         },
       }
     );
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to fetch messages from server");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
+  // Send message
   sendMessage: async (token, chatId, content, type = "REGULAR") => {
     const response = await fetch(
       `${API_BASE_URL}/api/chats/${chatId}/messages`,
@@ -193,14 +148,10 @@ export const authAPI = {
         body: JSON.stringify({ content, type }),
       }
     );
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to send message to server");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
-  // Submit initial query - Backend processing
+  // Submit query
   submitQuery: async (token, chatId, prompt) => {
     const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/query`, {
       method: "POST",
@@ -210,31 +161,21 @@ export const authAPI = {
       },
       body: JSON.stringify({ prompt }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to submit query to server");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
-  // Update chat state - Backend state management
-  updateChatState: async (token, chatId, state) => {
-    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}`, {
-      method: "PATCH",
+  // Get chat files
+  getChatFiles: async (token, chatId) => {
+    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/files`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ state }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to update chat state on server");
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
-  // Share chat - Backend sharing
+  // Share chat
   shareChat: async (token, chatId) => {
     const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/share`, {
       method: "POST",
@@ -243,26 +184,31 @@ export const authAPI = {
         "Content-Type": "application/json",
       },
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to share chat");
-    }
-    return response.json();
+    return handleResponse(response);
   },
+};
 
-  // Health check - Test backend connection
-  healthCheck: async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/health`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      return response.ok;
-    } catch (error) {
-      console.error("Backend health check failed:", error);
-      return false;
-    }
+export const fileAPI = {
+  // Upload file to chat
+  uploadFile: async (token, chatId, file, onProgress) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return handleResponse(response);
   },
+};
+
+// Combined API object for easier imports
+export const api = {
+  auth: authAPI,
+  chat: chatAPI,
+  file: fileAPI,
 };
