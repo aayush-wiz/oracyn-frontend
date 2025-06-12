@@ -82,6 +82,7 @@ export const useAuth = () => {
     loginMutation.reset();
     signupMutation.reset();
     updateProfileMutation.reset();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array since we want a stable reference
 
   // Check if user is authenticated
