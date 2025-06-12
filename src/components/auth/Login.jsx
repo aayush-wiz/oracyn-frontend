@@ -18,11 +18,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Clear errors when component mounts or form data changes
+  // Clear errors when component mounts
   useEffect(() => {
     clearErrors();
     setErrors({});
-  }, [formData, clearErrors]);
+  }, [clearErrors]);
 
   // Redirect if already authenticated
   if (isAuthenticated) {

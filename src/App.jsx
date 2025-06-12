@@ -21,7 +21,12 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ToastProvider>
-          <Router>
+          <Router
+            future={{
+              v7_relativeSplatPath: true,
+              v7_startTransition: true,
+            }}
+          >
             <div className="min-h-screen bg-gray-50">
               <Routes>
                 {/* Public Routes */}

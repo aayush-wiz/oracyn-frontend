@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { authAPI } from "../services/api.js";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const useAuth = () => {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -27,6 +27,14 @@ export const useAuth = () => {
       return failureCount < 3;
     },
   });
+
+  // Memoize logout function to prevent infinite loops
+  const logout = useCallback(() => {
+    setToken(null);
+    localStorage.removeItem("token");
+    queryClient.clear(); // Clear all cached data
+    navigate("/login");
+  }, [navigate, queryClient]);
 
   // Login mutation
   const loginMutation = useMutation({
@@ -69,13 +77,12 @@ export const useAuth = () => {
     },
   });
 
-  // Logout function
-  const logout = () => {
-    setToken(null);
-    localStorage.removeItem("token");
-    queryClient.clear(); // Clear all cached data
-    navigate("/login");
-  };
+  // Reset errors function - use refs to avoid dependency issues
+  const clearErrors = useCallback(() => {
+    loginMutation.reset();
+    signupMutation.reset();
+    updateProfileMutation.reset();
+  }, []); // Empty dependency array since we want a stable reference
 
   // Check if user is authenticated
   const isAuthenticated = !!token && !!user && !userError;
@@ -83,7 +90,7 @@ export const useAuth = () => {
   // Check if initial loading is complete
   const isLoading = isLoadingUser && !!token;
 
-  // Handle token validation errors
+  // Handle token validation errors - remove logout from dependencies
   useEffect(() => {
     if (userError && token) {
       const errorMessage = userError.message.toLowerCase();
@@ -93,10 +100,14 @@ export const useAuth = () => {
         errorMessage.includes("unauthorized")
       ) {
         console.warn("Token expired or invalid, logging out");
-        logout();
+        // Call logout directly instead of using it as a dependency
+        setToken(null);
+        localStorage.removeItem("token");
+        queryClient.clear();
+        navigate("/login");
       }
     }
-  }, [userError, token]);
+  }, [userError, token, navigate, queryClient]); // Removed logout dependency
 
   return {
     // State
@@ -124,10 +135,6 @@ export const useAuth = () => {
     userError,
 
     // Reset errors
-    clearErrors: () => {
-      loginMutation.reset();
-      signupMutation.reset();
-      updateProfileMutation.reset();
-    },
+    clearErrors,
   };
 };
