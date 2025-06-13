@@ -1,66 +1,195 @@
-@import "tailwindcss";
-@reference "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Uncomment the line below if you want to use local font files */
-@import "./assets/fonts/fonts.css";
-
-/* Custom Font Families */
-@theme {
-  --font-poppins: "Poppins", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-queensides: "Queensides", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  /* Add your custom font after importing fonts.css */
-  --font-custom: "SuperCharge", ui-sans-serif, system-ui, sans-serif;
-}
-
-/* Global font defaults - Queensides Medium for the entire project */
+/* --- Base & Background --- */
 body {
-  font-family: var(--font-queensides);
-  font-weight: 500; /* Medium weight */
+  background-color: #0a0f1f;
+  color: #e2e8f0;
+  font-family: "Inter", sans-serif;
 }
 
-/* Optional: Set specific fonts for headings (you can change this to Queensides too) */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-queensides);
-  font-weight: 500; /* Medium weight for headings */
+@keyframes illuminate-grid {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-/* Optional: Custom utility classes for when you want to use other fonts */
-.font-inter {
-  font-family: var(--font-inter);
+.illuminated-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background-color: #0a0f1f;
+  background-image: linear-gradient(
+      to right,
+      rgba(29, 78, 216, 0.3) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(29, 78, 216, 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-.font-poppins {
-  font-family: var(--font-poppins);
+.illuminated-grid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(
+    circle 800px at 50% 200%,
+    rgba(14, 165, 233, 0.15),
+    transparent
+  );
+  animation: illuminate-grid 20s linear infinite alternate;
 }
 
-.font-queensides {
-  font-family: var(--font-queensides);
+/* --- Text & Icon Animations --- */
+@keyframes luminous-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 4px #60a5fa, 0 0 8px #60a5fa;
+    opacity: 0.8;
+  }
+  50% {
+    text-shadow: 0 0 8px #3b82f6, 0 0 16px #2563eb;
+    opacity: 1;
+  }
 }
 
-/* Queensides weight utilities */
-.font-queensides-light {
-  font-family: var(--font-queensides);
-  font-weight: 300;
+.luminous-text span {
+  display: inline-block;
+  animation: luminous-pulse 3s ease-in-out infinite;
 }
 
-.font-queensides-regular {
-  font-family: var(--font-queensides);
-  font-weight: 400;
+@keyframes icon-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.animate-hop {
+  animation: icon-hop 1s ease-in-out infinite;
 }
 
-.font-queensides-medium {
-  font-family: var(--font-queensides);
-  font-weight: 500;
+@keyframes lock-and-key {
+  0% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-3px) rotate(10deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+}
+.animate-lock-key {
+  animation: lock-and-key 1.5s ease-in-out infinite;
 }
 
-.font-queensides-bold {
-  font-family: var(--font-queensides);
-  font-weight: 700;
+@keyframes color-change {
+  0% {
+    color: #f87171;
+  } /* red-400 */
+  25% {
+    color: #fbbf24;
+  } /* amber-400 */
+  50% {
+    color: #34d399;
+  } /* emerald-400 */
+  75% {
+    color: #818cf8;
+  } /* indigo-400 */
+  100% {
+    color: #f472b6;
+  } /* pink-400 */
+}
+.animate-color-change {
+  animation: color-change 4s linear infinite;
+}
+
+@keyframes lightning-strike {
+  0%,
+  100%,
+  95% {
+    opacity: 1;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  96% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 15px #fef08a);
+  }
+  97% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px #fef08a);
+  }
+  98% {
+    opacity: 0.5;
+    filter: drop-shadow(0 0 10px #fef08a);
+  }
+  99% {
+    opacity: 1;
+    filter: drop-shadow(0 0 3px #fef08a);
+  }
+}
+.animate-lightning {
+  animation: lightning-strike 3s ease-in-out infinite;
+}
+
+@keyframes sparkle-float {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(20px, -50px);
+    opacity: 0;
+  }
+}
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 5px #fff);
+  animation: sparkle-float 5s ease-in-out infinite;
+}
+
+/* --- Hero Button Effect --- */
+.hero-button {
+  transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
+}
+.hero-button:hover {
+  transform: scale(1.1);
+  background-color: #38bdf8; /* sky-400 */
+  box-shadow: 0 0 20px #38bdf8, 0 0 40px #0ea5e9;
+}
+
+/* --- Horizontal Marquee Slider --- */
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+.slider-marquee {
+  animation: marquee-scroll 40s linear infinite;
 }
