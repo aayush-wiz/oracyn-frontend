@@ -1,44 +1,26 @@
-import { Outlet } from "react-router-dom";
-import { useState } from "react";
-import Header from "./Header.jsx";
-import Sidebar from "./Sidebar.jsx";
-import { useAuth } from "../../hooks/useAuth.js";
+// components/layout/Layout.jsx
+import React, { useState } from "react";
+import Sidebar from "./Sidebar";
+import HistoryModal from "../main/HistoryModal";
 
-const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, isLoading } = useAuth();
+const Layout = ({ children }) => {
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const openHistoryModal = () => setIsHistoryModalOpen(true);
+  const closeHistoryModal = () => setIsHistoryModalOpen(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="min-h-screen bg-black">
+      <div className="illuminated-grid"></div>
+      <Sidebar onHistoryClick={openHistoryModal} />
 
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* Main content area */}
+      <main className="ml-[72px] transition-all duration-300 ease-in-out">
+        <div className="p-6">{children}</div>
+      </main>
 
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Header */}
-        <Header onMenuClick={() => setSidebarOpen(true)} user={user} />
-
-        {/* Page content */}
-        <main className="flex-1">
-          <Outlet />
-        </main>
-      </div>
+      {/* History Modal */}
+      <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
     </div>
   );
 };

@@ -1,3 +1,4 @@
+// pages/landing/ChartsSlider.jsx
 import React from "react";
 
 // The ChartIcons object contains the SVG definitions for each chart type.
@@ -98,7 +99,7 @@ const ChartsSlider = () => {
         <h2 className="text-4xl font-bold text-white">
           Generate Dynamic Charts
         </h2>
-        <p className="text-lg text-slate-400 mt-2">
+        <p className="text-lg text-gray-400 mt-2">
           Instantly visualize your data with a single prompt.
         </p>
       </div>
@@ -108,7 +109,7 @@ const ChartsSlider = () => {
           {sliderItems.map((item, index) => (
             <div
               key={`first-${index}`}
-              className="mx-4 flex-shrink-0 w-48 h-48 flex flex-col items-center justify-center bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-sky-500/20 text-sky-400"
+              className="mx-4 flex-shrink-0 w-48 h-48 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/30 text-gray-300 hover:bg-gray-800/90 transition-all duration-300"
             >
               <span className="text-6xl">{item.icon}</span>
               <span className="mt-2 text-white font-semibold">{item.name}</span>
@@ -120,7 +121,7 @@ const ChartsSlider = () => {
           {sliderItems.map((item, index) => (
             <div
               key={`second-${index}`}
-              className="mx-4 flex-shrink-0 w-48 h-48 flex flex-col items-center justify-center bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-sky-500/20 text-sky-400"
+              className="mx-4 flex-shrink-0 w-48 h-48 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-gray-700/30 text-gray-300 hover:bg-gray-800/90 transition-all duration-300"
             >
               <span className="text-6xl">{item.icon}</span>
               <span className="mt-2 text-white font-semibold">{item.name}</span>

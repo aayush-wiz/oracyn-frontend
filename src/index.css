@@ -176,9 +176,9 @@ body {
   transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
 }
 .hero-button:hover {
-  transform: scale(1.1);
-  background-color: #38bdf8; /* sky-400 */
-  box-shadow: 0 0 20px #38bdf8, 0 0 40px #0ea5e9;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(255, 255, 255, 0.05);
 }
 
 /* --- Horizontal Marquee Slider --- */
@@ -192,4 +192,38 @@ body {
 }
 .slider-marquee {
   animation: marquee-scroll 40s linear infinite;
+}
+
+/* --- Sidebar Animations --- */
+@keyframes logo-flicker {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px #38bdf8);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px #0ea5e9);
+  }
+}
+
+.logo-flicker {
+  animation: logo-flicker 3s ease-in-out infinite;
+}
+
+/* More prominent flickering light effect for the active navigation item */
+@keyframes active-item-glow {
+  0%,
+  100% {
+    background-color: rgba(56, 189, 248, 0.1);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2),
+      inset 0 0 5px rgba(56, 189, 248, 0.1);
+  }
+  50% {
+    background-color: rgba(56, 189, 248, 0.15);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4),
+      inset 0 0 8px rgba(56, 189, 248, 0.2);
+  }
+}
+
+.nav-item.active {
+  animation: active-item-glow 2s ease-in-out infinite;
 }

@@ -1,3 +1,4 @@
+// pages/SignupPage.jsx
 import React from "react";
 import { OracynLogo } from "../components/ui/Icons";
 import FormInput from "../components/common/FormInput";
@@ -9,13 +10,13 @@ const SignupPage = () => {
       {/* Background Grid */}
       <div className="illuminated-grid"></div>
 
-      <div className="w-full max-w-md p-8 space-y-8 bg-slate-900/50 backdrop-blur-lg rounded-2xl border border-sky-500/20 shadow-2xl shadow-sky-900/20">
+      <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/90 backdrop-blur-lg rounded-2xl border border-gray-700/30 shadow-2xl shadow-black/50">
         <div className="flex flex-col items-center text-center">
           <OracynLogo />
           <h2 className="mt-6 text-3xl font-bold text-white">
             Create an Account
           </h2>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-gray-400">
             Start your journey with Oracyn
           </p>
         </div>
@@ -42,17 +43,17 @@ const SignupPage = () => {
 
           <button
             type="submit"
-            className="hero-button w-full bg-sky-500 text-white font-bold text-base py-3 rounded-lg shadow-lg"
+            className="hero-button w-full bg-gray-700 hover:bg-gray-600 text-white font-bold text-base py-3 rounded-lg shadow-lg transition-all duration-300"
           >
             Create Account
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-400">
+        <p className="text-center text-sm text-gray-400">
           Already have an account?{" "}
           <a
             href="/login"
-            className="font-medium text-sky-400 hover:text-sky-300 transition-colors"
+            className="font-medium text-gray-300 hover:text-white transition-colors"
           >
             Sign in
           </a>
