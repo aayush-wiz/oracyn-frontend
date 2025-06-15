@@ -11,10 +11,10 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignUpPage";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./components/main/Dashboard";
-import Chat from "./components/main/Chat";
+import Chat from "./components/main/chat/Chat";
 import Charts from "./components/main/Charts";
 import Settings from "./components/settings/Settings";
-import ChatAssistant from "./components/main/ChatAssistant";
+
 
 function App() {
   return (

@@ -1,14 +1,16 @@
+/* --- BASE RESET --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* --- Base & Background --- */
 body {
-  background-color: #0a0f1f;
-  color: #e2e8f0;
+  background-color: #1a1a1e;
+  color: #d1d5db; /* slate-300 */
   font-family: "Inter", sans-serif;
 }
 
+/* --- Grid Background Animation --- */
 @keyframes illuminate-grid {
   0% {
     background-position: 100% 50%;
@@ -25,13 +27,13 @@ body {
   right: 0;
   bottom: 0;
   z-index: -1;
-  background-color: #0a0f1f;
+  background-color: #0f0f11;
   background-image: linear-gradient(
       to right,
-      rgba(29, 78, 216, 0.3) 1px,
+      rgba(80, 80, 80, 0.1) 1px,
       transparent 1px
     ),
-    linear-gradient(to bottom, rgba(29, 78, 216, 0.3) 1px, transparent 1px);
+    linear-gradient(to bottom, rgba(100, 100, 100, 0.08) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -44,33 +46,31 @@ body {
   bottom: 0;
   background-image: radial-gradient(
     circle 800px at 50% 200%,
-    rgba(14, 165, 233, 0.15),
+    rgba(255, 255, 255, 0.03),
     transparent
   );
   animation: illuminate-grid 20s linear infinite alternate;
 }
 
-/* --- Text & Icon Animations --- */
+/* --- Neutral Glowing Text --- */
 @keyframes luminous-pulse {
-  0%,
-  100% {
-    text-shadow: 0 0 4px #60a5fa, 0 0 8px #60a5fa;
-    opacity: 0.8;
-  }
-  50% {
-    text-shadow: 0 0 8px #3b82f6, 0 0 16px #2563eb;
+  0%, 100% {
+    text-shadow: 0 0 4px #d1d5db, 0 0 10px #9ca3af;
     opacity: 1;
   }
+  50% {
+    text-shadow: 0 0 6px #6b7280, 0 0 12px #4b5563;
+    opacity: 0.6;
+  }
 }
-
 .luminous-text span {
   display: inline-block;
   animation: luminous-pulse 3s ease-in-out infinite;
 }
 
+/* --- Icon Hop --- */
 @keyframes icon-hop {
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0);
   }
   50% {
@@ -78,83 +78,72 @@ body {
   }
 }
 .animate-hop {
-  animation: icon-hop 1s ease-in-out infinite;
+  animation: icon-hop 1.5s ease-in-out infinite;
 }
 
+/* --- Lock & Key Tilt --- */
 @keyframes lock-and-key {
-  0% {
-    transform: translateY(0) rotate(0);
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
   }
   50% {
-    transform: translateY(-3px) rotate(10deg);
-  }
-  100% {
-    transform: translateY(0) rotate(0);
+    transform: translateY(-3px) rotate(8deg);
   }
 }
 .animate-lock-key {
-  animation: lock-and-key 1.5s ease-in-out infinite;
+  animation: lock-and-key 2s ease-in-out infinite;
 }
 
+/* --- Subtle Hue Change --- */
 @keyframes color-change {
-  0% {
-    color: #f87171;
-  } /* red-400 */
-  25% {
-    color: #fbbf24;
-  } /* amber-400 */
-  50% {
-    color: #34d399;
-  } /* emerald-400 */
-  75% {
-    color: #818cf8;
-  } /* indigo-400 */
-  100% {
-    color: #f472b6;
-  } /* pink-400 */
+  0%   { color: #6b7280; } /* gray-600 */
+  25%  { color: #4b5563; } /* gray-700 */
+  50%  { color: #9ca3af; } /* gray-400 */
+  75%  { color: #71717a; } /* zinc-500 */
+  100% { color: #6b7280; }
 }
 .animate-color-change {
-  animation: color-change 4s linear infinite;
+  animation: color-change 6s linear infinite;
 }
 
+/* --- Lightning Flicker (Neutral) --- */
 @keyframes lightning-strike {
-  0%,
-  100%,
-  95% {
+  0%, 100%, 25% {
     opacity: 1;
     filter: drop-shadow(0 0 0px transparent);
   }
-  96% {
+  46% {
     opacity: 0.5;
-    filter: drop-shadow(0 0 15px #fef08a);
+    filter: drop-shadow(0 0 12px #a1a1aa);
   }
-  97% {
+  57% {
     opacity: 1;
-    filter: drop-shadow(0 0 2px #fef08a);
+    filter: drop-shadow(0 0 2px #d4d4d8);
   }
-  98% {
+  78% {
     opacity: 0.5;
-    filter: drop-shadow(0 0 10px #fef08a);
+    filter: drop-shadow(0 0 10px #71717a);
   }
   99% {
     opacity: 1;
-    filter: drop-shadow(0 0 3px #fef08a);
+    filter: drop-shadow(0 0 4px #a1a1aa);
   }
 }
 .animate-lightning {
-  animation: lightning-strike 3s ease-in-out infinite;
+  animation: lightning-strike 5s ease-in-out infinite;
 }
 
+/* --- Floating Sparkle (Soft White) --- */
 @keyframes sparkle-float {
   0% {
     transform: translate(0, 0);
     opacity: 0;
   }
   20% {
-    opacity: 1;
+    opacity: 0.4;
   }
   80% {
-    opacity: 1;
+    opacity: 0.6;
   }
   100% {
     transform: translate(20px, -50px);
@@ -163,25 +152,26 @@ body {
 }
 .sparkle {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  background: #fff;
+  width: 5px;
+  height: 5px;
+  background: #d1d5db;
   border-radius: 50%;
-  filter: drop-shadow(0 0 5px #fff);
+  filter: drop-shadow(0 0 4px #e5e7eb);
   animation: sparkle-float 5s ease-in-out infinite;
 }
 
-/* --- Hero Button Effect --- */
+/* --- Hero Button Hover --- */
 .hero-button {
   transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
 }
 .hero-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
-    0 0 40px rgba(255, 255, 255, 0.05);
+  transform: scale(1.04);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.05),
+    0 0 20px rgba(255, 255, 255, 0.03);
 }
 
-/* --- Horizontal Marquee Slider --- */
+/* --- Horizontal Marquee --- */
 @keyframes marquee-scroll {
   from {
     transform: translateX(0);
@@ -194,36 +184,34 @@ body {
   animation: marquee-scroll 40s linear infinite;
 }
 
-/* --- Sidebar Animations --- */
+/* --- Sidebar Logo Flicker --- */
 @keyframes logo-flicker {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 2px #38bdf8);
+  0%, 100% {
+    filter: drop-shadow(0 0 2px #a8b0b9);
   }
   50% {
-    filter: drop-shadow(0 0 6px #0ea5e9);
+    filter: drop-shadow(0 0 4px #cbd5e1);
   }
 }
-
 .logo-flicker {
   animation: logo-flicker 3s ease-in-out infinite;
 }
 
-/* More prominent flickering light effect for the active navigation item */
+/* --- Active Nav Item Glow --- */
 @keyframes active-item-glow {
-  0%,
-  100% {
-    background-color: rgba(56, 189, 248, 0.1);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2),
-      inset 0 0 5px rgba(56, 189, 248, 0.1);
+  0%, 100% {
+    background-color: rgba(156, 163, 175, 0.08);
+    box-shadow:
+      0 0 8px rgba(148, 163, 184, 0.15),
+      inset 0 0 4px rgba(148, 163, 184, 0.1);
   }
   50% {
-    background-color: rgba(56, 189, 248, 0.15);
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4),
-      inset 0 0 8px rgba(56, 189, 248, 0.2);
+    background-color: rgba(156, 163, 175, 0.12);
+    box-shadow:
+      0 0 14px rgba(148, 163, 184, 0.25),
+      inset 0 0 6px rgba(148, 163, 184, 0.15);
   }
 }
-
 .nav-item.active {
-  animation: active-item-glow 2s ease-in-out infinite;
+  animation: active-item-glow 2.5s ease-in-out infinite;
 }

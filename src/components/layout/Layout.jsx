@@ -16,7 +16,7 @@ const Layout = ({ children }) => {
 
       {/* Main content area */}
       <main className="ml-[72px] transition-all duration-300 ease-in-out">
-        <div className="p-6">{children}</div>
+        <div>{children}</div>
       </main>
 
       {/* History Modal */}
