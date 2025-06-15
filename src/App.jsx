@@ -1,6 +1,11 @@
 // App.jsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignUpPage";
@@ -9,7 +14,7 @@ import Dashboard from "./components/main/Dashboard";
 import Chat from "./components/main/Chat";
 import Charts from "./components/main/Charts";
 import Settings from "./components/settings/Settings";
-
+import ChatAssistant from "./components/main/ChatAssistant";
 
 function App() {
   return (

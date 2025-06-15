@@ -38,7 +38,7 @@ const Sidebar = ({ onHistoryClick }) => {
       icon: DashboardIcon,
       path: "/dashboard",
     },
-    { id: "chat", label: "Chat", icon: ChatIcon, path: "/chat" },
+    { id: "chat", label: "ChatAssistant", icon: ChatIcon, path: "/chat" },
     { id: "charts", label: "Charts", icon: ChartsIcon, path: "/charts" },
     {
       id: "settings",
