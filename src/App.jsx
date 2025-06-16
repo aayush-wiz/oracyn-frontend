@@ -12,7 +12,7 @@ import SignupPage from "./pages/SignUpPage";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./components/main/Dashboard";
 import Chat from "./components/main/chat/Chat";
-import Charts from "./components/main/Charts";
+import Charts from "./components/main/ChartGallery";
 import Settings from "./components/settings/Settings";
 
 

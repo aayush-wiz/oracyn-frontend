@@ -1,75 +1,116 @@
-import React, { useState, useRef } from "react";
-import { UploadIcon } from "../ui/Icons";
+import { useState, useRef } from "react";
+import { FileText, Upload } from "lucide-react";
 
-const FileUploadModal = ({ isOpen, onClose, onFileUpload }) => {
-  const [dragOver, setDragOver] = useState(false);
+const FileUploadModal = ({ isOpen, onClose, onUpload }) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleDragOver = (e) => {
+  const handleDrag = (e) => {
     e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    setDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      onFileUpload(files[0]);
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleFileSelect = (e) => {
-    const files = e.target.files;
-    if (files.length > 0) {
-      onFileUpload(files[0]);
+  const handleChange = (e) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = () => {
+    if (file) {
+      onUpload(file);
+      onClose();
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold text-white mb-4">Upload Document</h2>
-        <p className="text-gray-400 mb-6">
-          Upload a document to start analyzing with AI
-        </p>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 className="text-2xl font-semibold text-white mb-6">
+          Upload Document
+        </h2>
 
         <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-            dragOver
-              ? "border-blue-500 bg-blue-500/10"
-              : "border-gray-600 hover:border-gray-500"
+          className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            dragActive
+              ? "border-indigo-500 bg-indigo-500/10"
+              : "border-zinc-600"
           }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
         >
-          <UploadIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-white mb-2">Drag and drop your file here</p>
-          <p className="text-gray-400 text-sm mb-4">or click to browse</p>
-          <button className="bg-white text-black px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-            Choose File
-          </button>
           <input
             ref={fileInputRef}
             type="file"
-            onChange={handleFileSelect}
             className="hidden"
-            accept=".pdf,.doc,.docx,.txt,.csv,.xlsx,.xls"
+            onChange={handleChange}
+            accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
           />
+
+          {file ? (
+            <div className="space-y-4">
+              <FileText className="w-12 h-12 mx-auto text-indigo-400" />
+              <p className="text-white font-medium">{file.name}</p>
+              <p className="text-zinc-400 text-sm">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            </div>
+          ) : (
+            <>
+              <Upload className="w-12 h-12 mx-auto text-zinc-400 mb-4" />
+              <p className="text-zinc-300 mb-2">
+                Drag and drop your document here
+              </p>
+              <p className="text-zinc-500 text-sm mb-4">or</p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                Browse Files
+              </button>
+              <p className="text-zinc-500 text-xs mt-4">
+                Supported: PDF, DOC, DOCX, TXT, CSV, XLSX
+              </p>
+            </>
+          )}
         </div>
 
-        <p className="text-gray-500 text-xs mt-4">
-          Supported: PDF, DOC, DOCX, TXT, CSV, XLS, XLSX
-        </p>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleUpload}
+            disabled={!file}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Upload
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
   OracynLogo,
   DashboardIcon,
@@ -28,31 +28,7 @@ const Sidebar = ({ onHistoryClick }) => {
   const navItemBase =
     "flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors duration-200";
   const navItemIdle = "hover:bg-slate-700/50";
-  // The active class is now primarily for state tracking, animation is handled in CSS
   const navItemActive = "text-sky-300";
-
-  // --- Data for Navigation Links ---
-  const navLinks = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: DashboardIcon,
-      path: "/dashboard",
-    },
-    { id: "chat", label: "Chat", icon: ChatIcon, path: "/chat" },
-    { id: "charts", label: "Charts", icon: ChartsIcon, path: "/charts" },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: SettingsIcon,
-      path: "/settings",
-    },
-  ];
-
-  const handleNavigation = (link) => {
-    setActiveNav(link.id);
-    navigate(link.path);
-  };
 
   return (
     <div className="relative">
@@ -71,26 +47,58 @@ const Sidebar = ({ onHistoryClick }) => {
 
           {/* Navigation Links */}
           <nav className="flex-grow">
-            {navLinks.map((link) => (
-              <div
-                key={link.id}
-                className={`nav-item ${navItemBase} ${
-                  activeNav === link.id
-                    ? navItemActive + " active"
-                    : navItemIdle
+            {/* Dashboard Link */}
+            <Link
+              to="/dashboard"
+              className={`nav-item ${navItemBase} ${
+                activeNav === "dashboard"
+                  ? navItemActive + " active"
+                  : navItemIdle
+              }`}
+            >
+              <DashboardIcon
+                className={`w-7 h-7 shrink-0 ${
+                  activeNav === "dashboard" ? "text-sky-300" : "text-slate-400"
                 }`}
-                onClick={() => handleNavigation(link)}
-              >
-                <link.icon
-                  className={`w-7 h-7 shrink-0 ${
-                    activeNav === link.id ? "text-sky-300" : "text-slate-400"
-                  }`}
-                />
-                <span className="ml-4 font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
-                  {link.label}
-                </span>
-              </div>
-            ))}
+              />
+              <span className="ml-4 font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+                Dashboard
+              </span>
+            </Link>
+
+            {/* Chat Link */}
+            <Link
+              to="/chat"
+              className={`nav-item ${navItemBase} ${
+                activeNav === "chat" ? navItemActive + " active" : navItemIdle
+              }`}
+            >
+              <ChatIcon
+                className={`w-7 h-7 shrink-0 ${
+                  activeNav === "chat" ? "text-sky-300" : "text-slate-400"
+                }`}
+              />
+              <span className="ml-4 font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+                Chat
+              </span>
+            </Link>
+
+            {/* Charts Link */}
+            <Link
+              to="/charts"
+              className={`nav-item ${navItemBase} ${
+                activeNav === "charts" ? navItemActive + " active" : navItemIdle
+              }`}
+            >
+              <ChartsIcon
+                className={`w-7 h-7 shrink-0 ${
+                  activeNav === "charts" ? "text-sky-300" : "text-slate-400"
+                }`}
+              />
+              <span className="ml-4 font-semibold text-slate-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+                Charts
+              </span>
+            </Link>
 
             {/* History Button */}
             <div
@@ -104,15 +112,30 @@ const Sidebar = ({ onHistoryClick }) => {
             </div>
           </nav>
 
-          {/* User Profile Section */}
+          {/* User Profile Section - Now clickable for Settings */}
           <div className="mt-auto shrink-0 border-t border-slate-700/50 pt-4">
-            <div className="flex items-center">
+            <div
+              className={`flex items-center cursor-pointer rounded-lg transition-colors duration-200 ${
+                activeNav === "settings"
+                  ? "bg-slate-700/50"
+                  : "hover:bg-slate-700/30"
+              }`}
+              onClick={() => navigate("/settings")}
+            >
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
-                <UserProfileIcon />
+                {activeNav === "settings" ? (
+                  <SettingsIcon className="w-7 h-7 text-gray-300" />
+                ) : (
+                  <UserProfileIcon />
+                )}
               </div>
               <div className="ml-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
                 <p className="font-semibold text-white text-sm">John Doe</p>
-                <p className="text-xs text-slate-400">john.doe@example.com</p>
+                <p className="text-xs text-slate-400">
+                  {activeNav === "settings"
+                    ? "Settings"
+                    : "john.doe@example.com"}
+                </p>
               </div>
             </div>
           </div>
