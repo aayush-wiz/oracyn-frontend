@@ -1,26 +1,27 @@
-// components/layout/Layout.jsx
+// components/Layout.jsx
 import React, { useState } from "react";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import HistoryModal from "../main/HistoryModal";
 
-const Layout = ({ children }) => {
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-
-  const openHistoryModal = () => setIsHistoryModalOpen(true);
-  const closeHistoryModal = () => setIsHistoryModalOpen(false);
+const Layout = () => {
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="illuminated-grid"></div>
-      <Sidebar onHistoryClick={openHistoryModal} />
+    <div className="flex h-screen bg-[#030508]">
+      {/* Sidebar */}
+      <Sidebar onHistoryClick={() => setShowHistory(true)} />
 
-      {/* Main content area */}
-      <main className="ml-[72px] transition-all duration-300 ease-in-out">
-        <div>{children}</div>
+      {/* Main Content Area */}
+      <main className="flex-1 ml-[72px] overflow-hidden">
+        <Outlet />
       </main>
 
       {/* History Modal */}
-      <HistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} />
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
     </div>
   );
 };

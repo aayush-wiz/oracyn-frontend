@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { BarChart, LineChart, PieChart, BarChart3 } from "lucide-react";
 import Chart from "chart.js/auto";
-import { useStore } from "../../store/useStore";
+import useStore from "../../store/useStore";
 
 const ChartGallery = () => {
   const { charts } = useStore();

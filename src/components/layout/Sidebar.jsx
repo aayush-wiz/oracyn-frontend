@@ -15,13 +15,19 @@ const Sidebar = ({ onHistoryClick }) => {
   const location = useLocation();
 
   // Get active nav from current path
-  const currentPath = location.pathname.substring(1) || "dashboard";
-  const [activeNav, setActiveNav] = useState(currentPath);
+  const getActiveNav = (pathname) => {
+    if (pathname === "/" || pathname.includes("/dashboard")) return "dashboard";
+    if (pathname.includes("/chat")) return "chat";
+    if (pathname.includes("/charts")) return "charts";
+    if (pathname.includes("/settings")) return "settings";
+    return "dashboard";
+  };
+
+  const [activeNav, setActiveNav] = useState(getActiveNav(location.pathname));
 
   // Update active nav when route changes
   useEffect(() => {
-    const path = location.pathname.substring(1) || "dashboard";
-    setActiveNav(path);
+    setActiveNav(getActiveNav(location.pathname));
   }, [location.pathname]);
 
   // --- Styles for reuse (avoids repeating long class strings) ---
@@ -115,16 +121,16 @@ const Sidebar = ({ onHistoryClick }) => {
           {/* User Profile Section - Now clickable for Settings */}
           <div className="mt-auto shrink-0 border-t border-slate-700/50 pt-4">
             <div
-              className={`flex items-center cursor-pointer rounded-lg transition-colors duration-200 ${
+              className={`flex items-center cursor-pointer rounded-lg p-2 transition-colors duration-200 ${
                 activeNav === "settings"
                   ? "bg-slate-700/50"
                   : "hover:bg-slate-700/30"
               }`}
               onClick={() => navigate("/settings")}
             >
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center">
+              <div className="w-12 h-12 flex items-center justify-center">
                 {activeNav === "settings" ? (
-                  <SettingsIcon className="w-7 h-7 text-gray-300" />
+                  <SettingsIcon className="w-7 h-7 text-sky-300" />
                 ) : (
                   <UserProfileIcon />
                 )}

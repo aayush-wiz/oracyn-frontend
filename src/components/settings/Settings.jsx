@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-
+import { useState } from "react";
 
 const Settings = () => {
   const [form, setForm] = useState({
@@ -103,7 +102,7 @@ const Settings = () => {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 text-white p-6">
+    <div className="max-w-5xl mx-auto space-y-10 h-screen overflow-auto text-white p-6">
       <h1 className="text-3xl font-bold">Settings</h1>
 
       {/* Profile */}

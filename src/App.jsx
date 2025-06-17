@@ -1,69 +1,34 @@
-// App.jsx
-import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignUpPage";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./components/main/Dashboard";
 import Chat from "./components/main/chat/Chat";
 import Charts from "./components/main/ChartGallery";
 import Settings from "./components/settings/Settings";
-
+import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/" element={<Layout />}>
+          {/* Default redirect to dashboard */}
+          <Route index element={<Navigate to="/dashboard" replace />} />
 
-        {/* Protected routes with Layout wrapper */}
-        <Route
-          path="/dashboard"
-          element={
-            <Layout>
-              <Dashboard />
-            </Layout>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <Layout>
-              <Chat />
-            </Layout>
-          }
-        />
-        <Route
-          path="/charts"
-          element={
-            <Layout>
-              <Charts />
-            </Layout>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <Layout>
-              <Settings />
-            </Layout>
-          }
-        />
+          {/* Main routes */}
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="chat/:id" element={<Chat />} />
+          <Route path="charts" element={<Charts />} />
+          <Route path="settings" element={<Settings />} />
 
-        {/* Redirect /app to dashboard for convenience */}
-        <Route path="/app" element={<Navigate to="/dashboard" replace />} />
-
-        {/* Redirect any unknown routes to dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Catch all - redirect to dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
       </Routes>
     </Router>
   );

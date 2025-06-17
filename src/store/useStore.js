@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export const useStore = create(
+const useStore = create(
   persist(
     (set, get) => ({
       // Documents state
@@ -82,10 +82,31 @@ export const useStore = create(
         })),
 
       deleteChat: (chatId) =>
-        set((state) => ({
-          chats: state.chats.filter((chat) => chat.id !== chatId),
-          activeChatSessions: Math.max(0, state.activeChatSessions - 1),
-        })),
+        set((state) => {
+          const chatToDelete = state.chats.find((chat) => chat.id === chatId);
+          const updatedChats = state.chats.filter((chat) => chat.id !== chatId);
+
+          // Also remove associated charts
+          const updatedCharts = state.charts.filter(
+            (chart) => chart.chatId !== chatId
+          );
+
+          // Update storage if document was attached
+          let updatedStorage = state.storageUsed;
+          if (chatToDelete?.document) {
+            updatedStorage = Math.max(
+              0,
+              updatedStorage - (chatToDelete.document.size || 0) / (1024 * 1024)
+            );
+          }
+
+          return {
+            chats: updatedChats,
+            charts: updatedCharts,
+            activeChatSessions: Math.max(0, state.activeChatSessions - 1),
+            storageUsed: updatedStorage,
+          };
+        }),
 
       // Actions for charts
       addChart: (chart) =>

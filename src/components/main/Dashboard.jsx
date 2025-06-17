@@ -1,7 +1,7 @@
 // components/main/Dashboard.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import useAppStore from "../../store/useStore";
+import useStore from "../../store/useStore";
 import {
   DocumentIcon,
   ChatIcon,
@@ -32,7 +32,7 @@ const Dashboard = () => {
     maxStorage,
     createChat,
     getRecentActivities,
-  } = useAppStore();
+  } = useStore();
 
   // Get recent activities
   const recentActivities = getRecentActivities();
