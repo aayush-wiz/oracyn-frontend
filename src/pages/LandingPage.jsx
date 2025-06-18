@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BarChart3, TrendingUp, PieChart, Activity, Zap } from "lucide-react";
 import * as THREE from "three";
+import { useNavigate } from "react-router-dom";
 
 // Keep the original logo exactly as provided
 const OracynLogo = () => (
@@ -503,6 +504,7 @@ const AnimatedSection = ({ children, className = "", delay = 0 }) => {
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -529,7 +531,12 @@ const Header = () => {
         </div>
 
         <div className="flex items-center space-x-8">
-          <button className="relative group text-gray-300 hover:text-white transition-all duration-500 font-medium text-lg overflow-hidden">
+          <button
+            onClick={() => {
+              navigate("/login");
+            }}
+            className="relative group text-gray-300 hover:text-white transition-all duration-500 font-medium text-lg overflow-hidden"
+          >
             <span className="relative z-10 transform transition-all duration-300 group-hover:scale-105">
               Sign In
             </span>
@@ -537,7 +544,7 @@ const Header = () => {
           </button>
 
           <button className="relative group bg-transparent border-2 border-gray-600 text-white px-8 py-3 rounded-none font-semibold text-lg overflow-hidden transition-all duration-500 hover:border-white hover:shadow-2xl hover:shadow-white/20">
-            <div className="absolute inset-0 bg-white transform translate-y-full transition-transform duration-500 group-hover:translate-y-0"></div>
+            <div onClick={()=>navigate("/signup")} className="absolute inset-0 bg-white transform translate-y-full transition-transform duration-500 group-hover:translate-y-0"></div>
             <span className="relative z-10 transition-colors duration-500 group-hover:text-black">
               Get Started
             </span>

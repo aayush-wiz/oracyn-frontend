@@ -9,17 +9,21 @@ import Dashboard from "./components/main/Dashboard";
 import Chat from "./components/main/chat/Chat";
 import Charts from "./components/main/ChartGallery";
 import Settings from "./components/settings/Settings";
+import LandingPage from "./pages/LandingPage";
+import SignUpPage from "./pages/SignupPage";
+import LoginPage from "./pages/LoginPage";
 import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
         <Route path="/" element={<Layout />}>
-          {/* Default redirect to dashboard */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
-
           {/* Main routes */}
+
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:id" element={<Chat />} />
@@ -27,7 +31,6 @@ function App() {
           <Route path="settings" element={<Settings />} />
 
           {/* Catch all - redirect to dashboard */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </Router>

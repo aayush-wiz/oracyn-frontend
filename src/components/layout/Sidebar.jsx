@@ -42,11 +42,14 @@ const Sidebar = ({ onHistoryClick }) => {
       <aside className="fixed top-0 left-0 h-full w-[72px] hover:w-64 bg-slate-900/30 backdrop-blur-xl border-r border-sky-500/10 z-50 transition-all duration-300 ease-in-out group">
         <div className="flex flex-col h-full p-3">
           {/* Logo and App Name */}
-          <div className="flex items-center h-16 shrink-0 mb-4 pl-1">
+          <div
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center h-16 shrink-0 mb-4 pl-1"
+          >
             <div className="logo-flicker">
               <OracynLogo />
             </div>
-            <span className="text-xl font-bold text-white ml-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+            <span className="text-xl font-bold text-white ml-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100 cursor-pointer">
               Oracyn
             </span>
           </div>
