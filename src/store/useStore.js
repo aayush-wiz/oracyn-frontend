@@ -1,161 +1,219 @@
-// store/appStore.js
+// store/useStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 const useStore = create(
   persist(
     (set, get) => ({
-      // Documents state
-      documents: [],
-      totalDocumentsProcessed: 0,
-
-      // Chats state
+      // Chat state
       chats: [],
-      activeChatSessions: 0,
+      activeChat: null,
+
+      // Chart state
+      charts: [],
+      activeChart: null,
+
+      // Document state
+      documents: [],
+
+      // Analytics state
+      apiCalls: 0,
+      processingSpeed: 0,
+      totalDocumentsProcessed: 0,
+      storageUsed: 0, // in MB
+      maxStorage: 5120, // 5GB in MB
       maxChatSessions: 10,
 
-      // Charts state
-      charts: [],
-
-      // System metrics
-      processingSpeed: 0, // in seconds
-      apiCalls: 0,
-      storageUsed: 0, // in MB
-      maxStorage: 500, // in MB
-
-      // Actions for documents
-      addDocument: (document) =>
-        set((state) => ({
-          documents: [
-            ...state.documents,
-            {
-              id: Date.now(),
-              name: document.name,
-              uploadedAt: new Date().toISOString(),
-              size: document.size || 0,
-              ...document,
-            },
-          ],
-          totalDocumentsProcessed: state.totalDocumentsProcessed + 1,
-          storageUsed: Math.min(
-            state.storageUsed + (document.size || 0) / (1024 * 1024),
-            state.maxStorage
-          ),
-        })),
-
-      // Actions for chats
+      // Chat actions
       createChat: () => {
-        const state = get();
-        if (state.activeChatSessions >= state.maxChatSessions) {
-          return null; // Max sessions reached
-        }
+        const { chats } = get();
+        if (chats.length >= 10) return null; // Max 10 chats
 
         const newChat = {
           id: `chat-${Date.now()}`,
-          title: `New Chat ${state.chats.length + 1}`,
-          createdAt: new Date().toISOString(),
-          lastUsed: new Date().toISOString(),
+          title: `New Chat ${chats.length + 1}`,
           messages: [],
+          document: null,
           documentsUsed: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
 
         set((state) => ({
           chats: [newChat, ...state.chats],
-          activeChatSessions: Math.min(
-            state.activeChatSessions + 1,
-            state.maxChatSessions
-          ),
+          activeChat: newChat.id,
         }));
 
         return newChat.id;
       },
 
-      updateChat: (chatId, updates) =>
-        set((state) => ({
-          chats: state.chats
-            .map((chat) =>
-              chat.id === chatId
-                ? { ...chat, ...updates, lastUsed: new Date().toISOString() }
-                : chat
-            )
-            .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed)),
-        })),
-
-      deleteChat: (chatId) =>
-        set((state) => {
-          const chatToDelete = state.chats.find((chat) => chat.id === chatId);
-          const updatedChats = state.chats.filter((chat) => chat.id !== chatId);
-
-          // Also remove associated charts
-          const updatedCharts = state.charts.filter(
-            (chart) => chart.chatId !== chatId
-          );
-
-          // Update storage if document was attached
-          let updatedStorage = state.storageUsed;
-          if (chatToDelete?.document) {
-            updatedStorage = Math.max(
-              0,
-              updatedStorage - (chatToDelete.document.size || 0) / (1024 * 1024)
-            );
-          }
-
-          return {
-            chats: updatedChats,
-            charts: updatedCharts,
-            activeChatSessions: Math.max(0, state.activeChatSessions - 1),
-            storageUsed: updatedStorage,
-          };
-        }),
-
-      // Actions for charts
-      addChart: (chart) =>
-        set((state) => ({
-          charts: [
-            ...state.charts,
-            {
-              id: Date.now(),
-              createdAt: new Date().toISOString(),
-              ...chart,
-            },
-          ],
-        })),
-
-      // Get recent activities (top 3 most recent chats)
-      getRecentActivities: () => {
-        const state = get();
-        return state.chats
-          .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed))
-          .slice(0, 3);
+      setActiveChat: (chatId) => {
+        set({ activeChat: chatId });
       },
 
-      // Update metrics
-      updateProcessingSpeed: (speed) => set({ processingSpeed: speed }),
-      incrementApiCalls: () =>
-        set((state) => ({ apiCalls: state.apiCalls + 1 })),
+      updateChat: (chatId, updates) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? { ...chat, ...updates, updatedAt: new Date().toISOString() }
+              : chat
+          ),
+        }));
+      },
 
-      // Reset functions
-      resetStore: () =>
-        set({
-          documents: [],
-          totalDocumentsProcessed: 0,
-          chats: [],
-          activeChatSessions: 0,
-          charts: [],
-          processingSpeed: 0,
-          apiCalls: 0,
-          storageUsed: 0,
-        }),
+      deleteChat: (chatId) => {
+        set((state) => ({
+          chats: state.chats.filter((chat) => chat.id !== chatId),
+          activeChat: state.activeChat === chatId ? null : state.activeChat,
+        }));
+      },
+
+      addMessage: (chatId, message) => {
+        const newMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date().toLocaleTimeString(),
+          ...message,
+        };
+
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId
+              ? {
+                  ...chat,
+                  messages: [...chat.messages, newMessage],
+                  updatedAt: new Date().toISOString(),
+                }
+              : chat
+          ),
+        }));
+
+        return newMessage;
+      },
+
+      // Chart actions
+      createChart: (chartData) => {
+        const newChart = {
+          id: `chart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          chatId: chartData.chatId,
+          type: chartData.type || "bar",
+          label: chartData.label || "Untitled Chart",
+          data: chartData.data || {
+            labels: ["Sample Data"],
+            datasets: [
+              {
+                label: "Sample Dataset",
+                data: [42],
+                backgroundColor: ["rgba(99, 102, 241, 0.8)"],
+                borderColor: ["rgba(99, 102, 241, 1)"],
+                borderWidth: 1,
+              },
+            ],
+          },
+          config: chartData.config || {},
+          createdAt: new Date().toISOString(),
+          createdFrom: chartData.createdFrom || "Chat",
+        };
+
+        set((state) => ({
+          charts: [newChart, ...state.charts],
+        }));
+
+        return newChart;
+      },
+
+      updateChart: (chartId, updates) => {
+        set((state) => ({
+          charts: state.charts.map((chart) =>
+            chart.id === chartId ? { ...chart, ...updates } : chart
+          ),
+        }));
+      },
+
+      deleteChart: (chartId) => {
+        set((state) => ({
+          charts: state.charts.filter((chart) => chart.id !== chartId),
+        }));
+      },
+
+      // Document actions
+      addDocument: (documentData) => {
+        const newDocument = {
+          id: `doc-${Date.now()}`,
+          chatId: documentData.chatId,
+          name: documentData.name,
+          size: documentData.size,
+          type: documentData.type,
+          uploadedAt: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          documents: [newDocument, ...state.documents],
+          totalDocumentsProcessed: state.totalDocumentsProcessed + 1,
+          storageUsed: state.storageUsed + documentData.size / (1024 * 1024), // Convert to MB
+        }));
+
+        return newDocument;
+      },
+
+      // Analytics actions
+      incrementApiCalls: () => {
+        set((state) => ({
+          apiCalls: state.apiCalls + 1,
+        }));
+      },
+
+      updateProcessingSpeed: (speed) => {
+        set({ processingSpeed: speed });
+      },
+
+      // Utility functions
+      getCurrentChat: () => {
+        const { chats, activeChat } = get();
+        return chats.find((chat) => chat.id === activeChat);
+      },
+
+      getChatCharts: (chatId) => {
+        const { charts } = get();
+        return charts.filter((chart) => chart.chatId === chatId);
+      },
+
+      // Get recent activities from chats
+      getRecentActivities: () => {
+        const { chats } = get();
+        return chats
+          .filter((chat) => chat.messages.length > 0)
+          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+          .slice(0, 5)
+          .map((chat) => ({
+            ...chat,
+            lastUsed: chat.updatedAt,
+          }));
+      },
+
+      // Initialize with welcome message if no chats exist
+      initializeStore: () => {
+        const { chats } = get();
+        if (chats.length === 0) {
+          const welcomeChatId = get().createChat();
+          if (welcomeChatId) {
+            get().updateChat(welcomeChatId, {
+              title: "Welcome Chat",
+              messages: [
+                {
+                  id: "welcome-msg",
+                  sender: "assistant",
+                  text: "Welcome to Oracyn! Upload a document to start analyzing and creating charts from your data.",
+                  timestamp: new Date().toLocaleTimeString(),
+                },
+              ],
+            });
+          }
+        }
+      },
     }),
     {
-      name: "oracyn-app-storage", // unique name for localStorage
-      partialize: (state) => ({
-        documents: state.documents,
-        totalDocumentsProcessed: state.totalDocumentsProcessed,
-        chats: state.chats,
-        charts: state.charts,
-        storageUsed: state.storageUsed,
-      }), // Only persist certain parts of the state
+      name: "oracyn-store",
+      version: 1,
     }
   )
 );

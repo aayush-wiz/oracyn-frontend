@@ -1,6 +1,6 @@
-// components/main/Chat.jsx
+// components/main/chat/Chat.jsx
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import useStore from "../../../store/useStore";
 import {
   Send,
@@ -9,46 +9,62 @@ import {
   FileText,
   Plus,
   MessageSquare,
+  History,
+  AlertTriangle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ChartSidebar from "./ChatComponents/ChartSidebar";
 import FileUploadModal from "../../ui/FileUploadModal";
-
+import ChartDisplayModal from "./ChatComponents/ChartDisplayModal";
+import HistoryModal from "../HistoryModal";
 
 const Chat = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [message, setMessage] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showNewChatWarning, setShowNewChatWarning] = useState(false);
   const bottomRef = useRef(null);
 
   const {
     chats,
+    activeChat,
     createChat,
+    setActiveChat,
     updateChat,
+    addMessage,
     addDocument,
-    addChart,
+    createChart,
     incrementApiCalls,
     updateProcessingSpeed,
+    getCurrentChat,
+    initializeStore,
   } = useStore();
 
-  const currentChat = chats.find((chat) => chat.id === id);
+  const currentChat = getCurrentChat();
 
-  // Handle initial navigation and chat creation
+  // Initialize store on mount
+  useEffect(() => {
+    initializeStore();
+  }, [initializeStore]);
+
+  // Handle routing and chat management
   useEffect(() => {
     if (!id && chats.length === 0) {
-      // No chat ID and no chats exist - create first chat
       const newChatId = createChat();
       if (newChatId) {
         navigate(`/chat/${newChatId}`, { replace: true });
       }
     } else if (!id && chats.length > 0) {
-      // No chat ID but chats exist - navigate to most recent
+      setActiveChat(chats[0].id);
       navigate(`/chat/${chats[0].id}`, { replace: true });
     } else if (id && !currentChat) {
-      // Invalid chat ID - navigate to most recent or create new
       if (chats.length > 0) {
+        setActiveChat(chats[0].id);
         navigate(`/chat/${chats[0].id}`, { replace: true });
       } else {
         const newChatId = createChat();
@@ -56,15 +72,17 @@ const Chat = () => {
           navigate(`/chat/${newChatId}`, { replace: true });
         }
       }
+    } else if (id && currentChat && activeChat !== id) {
+      setActiveChat(id);
     }
-  }, [id, chats, currentChat, createChat, navigate]);
+  }, [id, chats, currentChat, activeChat, createChat, setActiveChat, navigate]);
 
-  // Show file upload modal only for new chats without documents
+  // Show file upload modal for new chats without documents
   useEffect(() => {
     if (
       currentChat &&
       !currentChat.document &&
-      currentChat.messages.length === 0
+      currentChat.messages.length <= 1
     ) {
       setShowFileUpload(true);
     }
@@ -76,6 +94,15 @@ const Chat = () => {
   }, [currentChat?.messages]);
 
   const handleNewChat = () => {
+    // Check if current chat has user messages (not just welcome message)
+    const hasUserMessages =
+      currentChat && currentChat.messages.some((msg) => msg.sender === "user");
+
+    if (hasUserMessages) {
+      setShowNewChatWarning(true);
+      return;
+    }
+
     const newChatId = createChat();
     if (newChatId) {
       navigate(`/chat/${newChatId}`);
@@ -85,18 +112,26 @@ const Chat = () => {
     }
   };
 
+  const handleForceNewChat = () => {
+    const newChatId = createChat();
+    if (newChatId) {
+      navigate(`/chat/${newChatId}`);
+      setShowFileUpload(true);
+      setShowNewChatWarning(false);
+    } else {
+      alert("Maximum chat sessions reached. Please close an existing chat.");
+    }
+  };
+
   const handleFileUpload = (file) => {
     if (currentChat && file) {
-      // Add document to store
       addDocument({
         name: file.name,
         size: file.size,
         chatId: currentChat.id,
         type: file.type,
-        uploadedAt: new Date().toISOString(),
       });
 
-      // Update chat with document info
       updateChat(currentChat.id, {
         document: {
           name: file.name,
@@ -104,19 +139,12 @@ const Chat = () => {
           type: file.type,
         },
         documentsUsed: 1,
-        title: `Chat: ${file.name}`, // Update chat title with document name
+        title: `Chat: ${file.name}`,
       });
 
-      // Add system message about document upload
-      const systemMessage = {
-        id: `msg-${Date.now()}`,
+      addMessage(currentChat.id, {
         sender: "assistant",
-        text: `I've successfully loaded "${file.name}". What would you like to know about this document?`,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-
-      updateChat(currentChat.id, {
-        messages: [...(currentChat.messages || []), systemMessage],
+        text: `I've successfully analyzed "${file.name}". What would you like to know about this document? You can ask me to create charts, analyze data, or answer specific questions about the content.`,
       });
 
       setShowFileUpload(false);
@@ -126,39 +154,27 @@ const Chat = () => {
   const handleSendMessage = async () => {
     if (!message.trim() || !currentChat) return;
 
-    const userMessage = {
-      id: `msg-${Date.now()}`,
+    addMessage(currentChat.id, {
       sender: "user",
       text: message,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
-    // Update chat with new message
-    updateChat(currentChat.id, {
-      messages: [...(currentChat.messages || []), userMessage],
     });
 
+    const userQuery = message;
     setMessage("");
     setIsTyping(true);
 
-    // Simulate API call
     incrementApiCalls();
     const startTime = Date.now();
 
-    // Simulate assistant response with delay
     setTimeout(() => {
       const processingTime = (Date.now() - startTime) / 1000;
       updateProcessingSpeed(processingTime);
 
-      const assistantMessage = {
-        id: `msg-${Date.now()}`,
-        sender: "assistant",
-        text: generateMockResponse(message, currentChat.document),
-        timestamp: new Date().toLocaleTimeString(),
-      };
+      const response = generateMockResponse(userQuery, currentChat);
 
-      updateChat(currentChat.id, {
-        messages: [...currentChat.messages, userMessage, assistantMessage],
+      addMessage(currentChat.id, {
+        sender: "assistant",
+        text: response,
       });
 
       setIsTyping(false);
@@ -173,24 +189,150 @@ const Chat = () => {
   };
 
   const handleChartTrigger = (chartConfig) => {
-    const newChart = {
+    const mockData = generateMockChartData(chartConfig.type);
+    const newChart = createChart({
       ...chartConfig,
       chatId: currentChat.id,
       createdFrom: currentChat.title,
-    };
-    addChart(newChart);
+      data: mockData,
+    });
+
+    navigate(`?selected=${newChart.id}`, { replace: false });
+  };
+
+  // Custom component for chart triggers
+  const ChartTriggerButton = ({ type, label }) => (
+    <button
+      className="inline-flex items-center gap-2 px-4 py-2 mt-3 mr-2 mb-2 bg-blue-600/30 border border-blue-500/50 text-blue-300 rounded-lg hover:bg-blue-600/50 hover:border-blue-400 transition-all duration-300 hover:scale-105 backdrop-blur-sm group/chart relative"
+      onClick={() => handleChartTrigger({ type, label })}
+    >
+      <span className="transform group-hover/chart:rotate-12 transition-transform duration-300">
+        📊
+      </span>
+      {label}
+      <div className="absolute inset-0 bg-blue-400/10 rounded-lg opacity-0 group-hover/chart:opacity-100 transition-opacity duration-300"></div>
+    </button>
+  );
+
+  // Function to render message content with chart buttons
+  const renderMessageContent = (text) => {
+    // Split text by chart-trigger tags
+    const chartTriggerRegex =
+      /<chart-trigger\s+type="([^"]+)"\s+label="([^"]+)"><\/chart-trigger>/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = chartTriggerRegex.exec(text)) !== null) {
+      // Add text before the chart trigger
+      if (match.index > lastIndex) {
+        const textBefore = text.slice(lastIndex, match.index);
+        if (textBefore.trim()) {
+          parts.push(
+            <ReactMarkdown key={`text-${lastIndex}`}>
+              {textBefore}
+            </ReactMarkdown>
+          );
+        }
+      }
+
+      // Add the chart trigger button
+      const [, type, label] = match;
+      parts.push(
+        <ChartTriggerButton
+          key={`chart-${match.index}`}
+          type={type}
+          label={label.replace(/_/g, " ")}
+        />
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text after the last chart trigger
+    if (lastIndex < text.length) {
+      const remainingText = text.slice(lastIndex);
+      if (remainingText.trim()) {
+        parts.push(
+          <ReactMarkdown key={`text-${lastIndex}`}>
+            {remainingText}
+          </ReactMarkdown>
+        );
+      }
+    }
+
+    // If no chart triggers found, just render as regular markdown
+    if (parts.length === 0) {
+      return <ReactMarkdown>{text}</ReactMarkdown>;
+    }
+
+    return <div className="space-y-2">{parts}</div>;
+  };
+
+  // Generate mock chart data based on type
+  const generateMockChartData = (type) => {
+    const labels = ["Q1", "Q2", "Q3", "Q4"];
+    const colors = [
+      "rgba(99, 102, 241, 0.8)",
+      "rgba(16, 185, 129, 0.8)",
+      "rgba(245, 158, 11, 0.8)",
+      "rgba(239, 68, 68, 0.8)",
+    ];
+
+    switch (type) {
+      case "pie":
+      case "doughnut":
+        return {
+          labels: ["Revenue", "Expenses", "Profit", "Investment"],
+          datasets: [
+            {
+              data: [12400000, 8200000, 4200000, 2100000],
+              backgroundColor: colors,
+              borderColor: colors.map((c) => c.replace("0.8", "1")),
+              borderWidth: 2,
+            },
+          ],
+        };
+      case "line":
+        return {
+          labels,
+          datasets: [
+            {
+              label: "Revenue Growth",
+              data: [8200000, 9100000, 10800000, 12400000],
+              borderColor: "rgba(99, 102, 241, 1)",
+              backgroundColor: "rgba(99, 102, 241, 0.1)",
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        };
+      default: // bar
+        return {
+          labels,
+          datasets: [
+            {
+              label: "Revenue by Quarter",
+              data: [8200000, 9100000, 10800000, 12400000],
+              backgroundColor: colors,
+              borderColor: colors.map((c) => c.replace("0.8", "1")),
+              borderWidth: 2,
+            },
+          ],
+        };
+    }
   };
 
   // Generate mock responses based on query
-  const generateMockResponse = (query, document) => {
+  const generateMockResponse = (query, chat) => {
     const lowerQuery = query.toLowerCase();
 
-    if (!document) {
+    if (!chat.document) {
       return "Please upload a document first so I can help you analyze it.";
     }
 
     if (lowerQuery.includes("revenue") || lowerQuery.includes("sales")) {
-      return `Based on the analysis of ${document.name}, here are the revenue insights:
+      return `Based on the analysis of **${chat.document.name}**, here are the revenue insights:
 
 **Total Revenue: $12.4M** (Q4 2024)
 - YoY Growth: 18%
@@ -201,28 +343,53 @@ const Chat = () => {
 - Professional Services: $2.73M (22%)
 - License Sales: $1.24M (10%)
 
-<ChartTrigger id="revenue-chart" label="Revenue Breakdown" type="pie" />
+<chart-trigger type="pie" label="Revenue_Breakdown"></chart-trigger>
 
 Would you like me to analyze specific revenue streams or compare with previous quarters?`;
     }
 
-    if (lowerQuery.includes("chart") || lowerQuery.includes("visualiz")) {
-      return `I can create various visualizations from your document. Here are some options:
+    if (
+      lowerQuery.includes("chart") ||
+      lowerQuery.includes("visualiz") ||
+      lowerQuery.includes("graph")
+    ) {
+      return `I can create various visualizations from your document data. Here are some options:
 
-<ChartTrigger id="trend-chart" label="Trend Analysis" type="line" />
-<ChartTrigger id="comparison-chart" label="Category Comparison" type="bar" />
-<ChartTrigger id="distribution-chart" label="Data Distribution" type="pie" />
+<chart-trigger type="line" label="Trend_Analysis"></chart-trigger>
+<chart-trigger type="bar" label="Category_Comparison"></chart-trigger>
+<chart-trigger type="pie" label="Data_Distribution"></chart-trigger>
 
 Click on any chart button above to generate the visualization.`;
     }
 
-    return `I've analyzed your query about "${query}" in the context of ${document.name}. 
+    if (lowerQuery.includes("summary") || lowerQuery.includes("overview")) {
+      return `Here's a comprehensive summary of **${chat.document.name}**:
+
+**Key Metrics:**
+- Total Revenue: $12.4M (+18% YoY)
+- Active Users: 45,000 (+23% YoY)
+- Customer Satisfaction: 94%
+- Market Share: 12%
+
+**Growth Trends:**
+- Quarterly revenue growth averaging 7.2%
+- User acquisition rate of 1,200 new users/month
+- Customer retention rate of 89%
+
+<chart-trigger type="line" label="Growth_Trends"></chart-trigger>
+
+Would you like me to dive deeper into any specific area?`;
+    }
+
+    return `I've analyzed your query about "${query}" in the context of **${chat.document.name}**. 
 
 Based on the document content, I can help you with:
-- Data analysis and insights
-- Creating visualizations
-- Answering specific questions
-- Generating summaries
+- **Data analysis** and insights extraction
+- **Creating visualizations** and charts
+- **Answering specific questions** about the content
+- **Generating summaries** and reports
+
+<chart-trigger type="bar" label="Data_Overview"></chart-trigger>
 
 What specific aspect would you like me to focus on?`;
   };
@@ -239,91 +406,135 @@ What specific aspect would you like me to focus on?`;
   }
 
   return (
-    <div className="h-screen bg-[#030508] flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-black via-gray-900 to-black flex flex-col relative overflow-hidden">
+      {/* Subtle geometric background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-20 w-32 h-32 border border-gray-500 rotate-45"></div>
+        <div className="absolute top-40 right-40 w-24 h-24 border border-gray-600 rotate-12"></div>
+        <div className="absolute bottom-32 left-32 w-16 h-16 border border-gray-400"></div>
+        <div className="absolute bottom-20 right-20 w-20 h-20 border border-gray-500 rotate-45"></div>
+      </div>
+
       {/* Header */}
-      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-800">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold text-white">
-            {currentChat.title}
-          </h2>
+      <div className="flex items-center justify-center px-8 py-6 border-b border-gray-800/60 backdrop-blur-xl bg-black/40 relative z-10">
+        {/* Geometric corner accents */}
+        <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-gray-600 opacity-30"></div>
+        <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-gray-600 opacity-30"></div>
+
+        {/* Left side - Chat info */}
+        <div className="absolute left-8 flex items-center gap-4">
+          <div className="relative">
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              {currentChat.title}
+            </h2>
+            <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-white group-hover:w-full transition-all duration-500"></div>
+          </div>
           {currentChat.document && (
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <FileText className="w-4 h-4" />
-              <span>{currentChat.document.name}</span>
+            <div className="flex items-center gap-3 px-4 py-2 bg-gray-900/60 border border-gray-700/50 rounded-lg backdrop-blur-sm">
+              <FileText className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-300">
+                {currentChat.document.name}
+              </span>
             </div>
           )}
         </div>
-        <button
-          onClick={handleNewChat}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-4 h-4" />
-          New Chat
-        </button>
+
+        {/* Center - Action Buttons */}
+        <div className="flex items-center gap-4">
+          {/* History Button */}
+          <button
+            onClick={() => setShowHistory(true)}
+            className="group relative bg-transparent border-2 border-gray-700 text-white px-4 py-3 font-semibold overflow-hidden transition-all duration-500 hover:border-gray-500 hover:shadow-lg hover:shadow-gray-500/20 hover:scale-105"
+          >
+            <div className="absolute inset-0 bg-gray-600 transform -skew-x-12 -translate-x-full transition-transform duration-500 group-hover:translate-x-0"></div>
+            <span className="relative z-10 flex items-center gap-2 transition-colors duration-500 group-hover:text-white">
+              <History className="w-5 h-5" />
+              History
+            </span>
+
+            {/* Corner accents */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          </button>
+
+          {/* New Chat Button */}
+          <button
+            onClick={handleNewChat}
+            className="group relative bg-transparent border-2 border-gray-600 text-white px-4 py-3 font-semibold overflow-hidden transition-all duration-500 hover:border-white hover:shadow-xl hover:shadow-white/20 hover:scale-105"
+          >
+            <div className="absolute inset-0 bg-white transform -skew-x-12 -translate-x-full transition-transform duration-500 group-hover:translate-x-0"></div>
+            <span className="relative z-10 flex items-center gap-2 transition-colors duration-500 group-hover:text-black">
+              <Plus className="w-5 h-5" />
+              New Chat
+            </span>
+
+            {/* Corner accents */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          </button>
+        </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-4 md:px-20 py-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {currentChat.messages?.map((msg) => (
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Main Chat Content */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 relative z-10">
+          <div className="max-w-4xl mx-auto space-y-8">
+            {currentChat.messages?.map((msg, index) => (
               <div
                 key={msg.id}
                 className={`flex ${
                   msg.sender === "user" ? "justify-end" : "justify-start"
-                }`}
+                } group`}
               >
                 <div
-                  className={`flex gap-3 max-w-[80%] ${
+                  className={`flex gap-4 max-w-[80%] ${
                     msg.sender === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  <div className="flex-shrink-0">
-                    {msg.sender === "user" ? (
-                      <UserCircle className="w-8 h-8 text-gray-400" />
-                    ) : (
-                      <Bot className="w-8 h-8 text-indigo-400" />
-                    )}
+                  <div className="flex-shrink-0 relative">
+                    <div className="w-10 h-10 rounded-lg bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center group-hover:border-gray-600/70 transition-all duration-300">
+                      {msg.sender === "user" ? (
+                        <UserCircle className="w-6 h-6 text-gray-300" />
+                      ) : (
+                        <Bot className="w-6 h-6 text-indigo-400" />
+                      )}
+                    </div>
                   </div>
                   <div
-                    className={`rounded-lg px-4 py-3 ${
+                    className={`rounded-xl px-6 py-4 backdrop-blur-sm transition-all duration-300 group-hover:scale-[1.02] relative overflow-hidden ${
                       msg.sender === "user"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-800 text-gray-100"
+                        ? "bg-indigo-600/80 text-white border border-indigo-500/50"
+                        : "bg-gray-800/80 text-gray-100 border border-gray-700/50"
                     }`}
                   >
-                    <ReactMarkdown
-                      components={{
-                        ChartTrigger: ({ id, label, type }) => (
-                          <button
-                            className="inline-flex items-center gap-2 px-3 py-1 mt-2 bg-blue-600/20 border border-blue-500 text-blue-300 rounded hover:bg-blue-600/30 transition"
-                            onClick={() =>
-                              handleChartTrigger({ id, label, type })
-                            }
-                          >
-                            📊 {label}
-                          </button>
-                        ),
-                      }}
-                    >
-                      {msg.text}
-                    </ReactMarkdown>
-                    <p className="text-xs mt-1 opacity-50">{msg.timestamp}</p>
+                    {/* Geometric background pattern */}
+                    <div className="absolute inset-0 opacity-5">
+                      <div className="absolute top-2 right-2 w-4 h-4 border border-current rotate-45"></div>
+                      <div className="absolute bottom-2 left-2 w-3 h-3 border border-current"></div>
+                    </div>
+
+                    <div className="relative z-10">
+                      {renderMessageContent(msg.text)}
+                    </div>
+                    <p className="text-xs mt-2 opacity-60">{msg.timestamp}</p>
                   </div>
                 </div>
               </div>
             ))}
 
             {isTyping && (
-              <div className="flex items-center gap-3">
-                <Bot className="w-8 h-8 text-indigo-400" />
-                <div className="bg-gray-800 rounded-lg px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400">Assistant is typing</span>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-indigo-400" />
+                </div>
+                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-300">Assistant is thinking</span>
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100" />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200" />
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" />
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100" />
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200" />
                     </div>
                   </div>
                 </div>
@@ -334,33 +545,44 @@ What specific aspect would you like me to focus on?`;
           </div>
         </div>
 
-        {/* Chart Sidebar */}
+        {/* Chart Sidebar - Always visible when charts exist */}
         <ChartSidebar chatId={currentChat.id} />
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-800 px-4 md:px-20 py-4">
+      <div className="border-t border-gray-800/60 px-8 py-6 backdrop-blur-xl bg-black/40 relative z-10">
+        {/* Geometric accent */}
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent opacity-20"></div>
+
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 bg-gray-900 rounded-lg px-4 py-3">
+          <div
+            className={`flex items-center gap-4 bg-gray-900/60 backdrop-blur-sm rounded-xl px-6 py-4 border transition-all duration-500 ${
+              isFocused
+                ? "border-gray-500/80 shadow-lg shadow-white/10"
+                : "border-gray-700/50"
+            }`}
+          >
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               placeholder={
                 currentChat.document
                   ? "Ask a question about your document..."
                   : "Upload a document to start..."
               }
               disabled={!currentChat.document}
-              className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
+              className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-lg"
             />
             <button
               onClick={handleSendMessage}
               disabled={!message.trim() || !currentChat.document}
-              className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="group relative p-3 bg-indigo-600/80 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/30 backdrop-blur-sm"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-300" />
             </button>
           </div>
         </div>
@@ -374,6 +596,72 @@ What specific aspect would you like me to focus on?`;
           onUpload={handleFileUpload}
         />
       )}
+
+      {/* History Modal */}
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+      />
+
+      {/* New Chat Warning Modal */}
+      {showNewChatWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black border border-gray-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative overflow-hidden">
+            {/* Geometric background pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute top-4 left-4 w-8 h-8 border border-gray-400 rotate-45"></div>
+              <div className="absolute bottom-4 right-4 w-6 h-6 border border-gray-500"></div>
+            </div>
+
+            {/* Corner accents */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-l-4 border-t-4 border-orange-500"></div>
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-r-4 border-b-4 border-orange-500"></div>
+
+            <div className="p-6 relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-orange-600/20 border border-orange-500/50 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Start New Chat?
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    You have an active conversation
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-300 mb-6">
+                You currently have an active chat with messages. Starting a new
+                chat will keep your current conversation in history, but you'll
+                lose the current context.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowNewChatWarning(false)}
+                  className="flex-1 px-4 py-3 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 hover:border-gray-500/70 text-white rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  Continue Current
+                </button>
+                <button
+                  onClick={handleForceNewChat}
+                  className="group flex-1 relative bg-transparent border-2 border-orange-600 text-white px-4 py-3 font-semibold overflow-hidden transition-all duration-500 hover:border-orange-500 hover:shadow-lg hover:shadow-orange-500/20 hover:scale-105"
+                >
+                  <div className="absolute inset-0 bg-orange-600 transform -skew-x-12 -translate-x-full transition-transform duration-500 group-hover:translate-x-0"></div>
+                  <span className="relative z-10 transition-colors duration-500 group-hover:text-white">
+                    Start New Chat
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart Display Modal */}
+      <ChartDisplayModal />
     </div>
   );
 };

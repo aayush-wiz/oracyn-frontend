@@ -1,9 +1,4 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./components/main/Dashboard";
 import Chat from "./components/main/chat/Chat";
@@ -16,21 +11,24 @@ import "./App.css";
 
 function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+
         <Route path="/" element={<Layout />}>
           {/* Main routes */}
-
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:id" element={<Chat />} />
           <Route path="charts" element={<Charts />} />
           <Route path="settings" element={<Settings />} />
-
-          {/* Catch all - redirect to dashboard */}
         </Route>
       </Routes>
     </Router>

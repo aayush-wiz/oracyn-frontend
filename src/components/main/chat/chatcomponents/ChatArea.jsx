@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bot, UserCircle, FileText } from "lucide-react";
 import { useStore } from "../../../../store/useStore";
-import ChartSidebar from "./ChartSidebar";
+import ChartSidebar from "./ChatComponents/ChartSidebar";
 import TypingIndicator from "./TypingIndicator";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -15,6 +15,7 @@ const ChatArea = () => {
   const currentChat = getCurrentChat();
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef(null);
+  const currentChatId = currentChat?.id;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -102,7 +103,8 @@ const ChatArea = () => {
         <div ref={bottomRef} />
       </div>
 
-      <ChartSidebar />
+      <ChartSidebar chatId={currentChatId} />
+      
     </div>
   );
 };
