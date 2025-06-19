@@ -1,6 +1,7 @@
 // store/useStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { nanoid } from "nanoid";
 
 const useStore = create(
   persist(
@@ -24,13 +25,42 @@ const useStore = create(
       maxStorage: 5120, // 5GB in MB
       maxChatSessions: 10,
 
+      // Helper function to check if a chat is empty
+      isChatEmpty: (chat) => {
+        if (!chat) return true;
+
+        // A chat is empty if:
+        // 1. No messages at all, OR
+        // 2. Only has welcome/assistant messages and no user messages, OR
+        // 3. No document uploaded and no meaningful user interaction
+        const hasUserMessages = chat.messages.some(
+          (msg) => msg.sender === "user"
+        );
+        const hasDocument = !!chat.document;
+
+        return !hasUserMessages && !hasDocument;
+      },
+
+      // Check if there's an existing empty chat
+      hasEmptyChat: () => {
+        const { chats, isChatEmpty } = get();
+        return chats.some((chat) => isChatEmpty(chat));
+      },
+
       // Chat actions
       createChat: () => {
-        const { chats } = get();
-        if (chats.length >= 10) return null; // Max 10 chats
+        const { chats, hasEmptyChat } = get();
+
+        // Check if maximum chats reached
+        if (chats.length >= 10) return null;
+
+        // Check if there's already an empty chat
+        if (hasEmptyChat()) {
+          return null; // Don't create new chat if empty one exists
+        }
 
         const newChat = {
-          id: `chat-${Date.now()}`,
+          id: nanoid(), // Use nanoid for unique ID
           title: `New Chat ${chats.length + 1}`,
           messages: [],
           document: null,
@@ -45,6 +75,20 @@ const useStore = create(
         }));
 
         return newChat.id;
+      },
+
+      // Get or create empty chat (for dashboard and routing)
+      getOrCreateEmptyChat: () => {
+        const { chats, isChatEmpty, createChat } = get();
+
+        // First, try to find an existing empty chat
+        const emptyChat = chats.find((chat) => isChatEmpty(chat));
+        if (emptyChat) {
+          return emptyChat.id;
+        }
+
+        // If no empty chat exists, create a new one
+        return createChat();
       },
 
       setActiveChat: (chatId) => {
@@ -62,15 +106,27 @@ const useStore = create(
       },
 
       deleteChat: (chatId) => {
-        set((state) => ({
-          chats: state.chats.filter((chat) => chat.id !== chatId),
-          activeChat: state.activeChat === chatId ? null : state.activeChat,
-        }));
+        set((state) => {
+          const updatedChats = state.chats.filter((chat) => chat.id !== chatId);
+          const updatedCharts = state.charts.filter(
+            (chart) => chart.chatId !== chatId
+          );
+          const updatedDocuments = state.documents.filter(
+            (doc) => doc.chatId !== chatId
+          );
+
+          return {
+            chats: updatedChats,
+            charts: updatedCharts,
+            documents: updatedDocuments,
+            activeChat: state.activeChat === chatId ? null : state.activeChat,
+          };
+        });
       },
 
       addMessage: (chatId, message) => {
         const newMessage = {
-          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: nanoid(), // Use nanoid for unique message ID
           timestamp: new Date().toLocaleTimeString(),
           ...message,
         };
@@ -93,7 +149,7 @@ const useStore = create(
       // Chart actions
       createChart: (chartData) => {
         const newChart = {
-          id: `chart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          id: nanoid(), // Use nanoid for unique chart ID
           chatId: chartData.chatId,
           type: chartData.type || "bar",
           label: chartData.label || "Untitled Chart",
@@ -138,7 +194,7 @@ const useStore = create(
       // Document actions
       addDocument: (documentData) => {
         const newDocument = {
-          id: `doc-${Date.now()}`,
+          id: nanoid(), // Use nanoid for unique document ID
           chatId: documentData.chatId,
           name: documentData.name,
           size: documentData.size,
@@ -192,15 +248,15 @@ const useStore = create(
 
       // Initialize with welcome message if no chats exist
       initializeStore: () => {
-        const { chats } = get();
+        const { chats, createChat, updateChat } = get();
         if (chats.length === 0) {
-          const welcomeChatId = get().createChat();
+          const welcomeChatId = createChat();
           if (welcomeChatId) {
-            get().updateChat(welcomeChatId, {
+            updateChat(welcomeChatId, {
               title: "Welcome Chat",
               messages: [
                 {
-                  id: "welcome-msg",
+                  id: nanoid(),
                   sender: "assistant",
                   text: "Welcome to Oracyn! Upload a document to start analyzing and creating charts from your data.",
                   timestamp: new Date().toLocaleTimeString(),

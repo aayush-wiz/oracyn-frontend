@@ -1,4 +1,3 @@
-// components/settings/Settings.jsx
 import { useState } from "react";
 import {
   User,
@@ -36,8 +35,13 @@ const Settings = () => {
     analyticsSharing: false,
   });
 
+  const numberFields = ["sessionTimeout", "maxTokens", "retention"];
+
   const handleChange = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [key]: numberFields.includes(key) ? Number(value) : value,
+    }));
   };
 
   const Input = ({ type = "text", value, onChange, placeholder }) => (
@@ -61,8 +65,8 @@ const Settings = () => {
       type="button"
       onClick={(e) => {
         e.preventDefault();
-        e.stopPropagation();
         onCheckedChange(!checked);
+        e.currentTarget.blur(); // Prevents scrolling by removing focus
       }}
       className={`relative w-14 h-7 rounded-full flex items-center px-1 transition-all duration-300 ${
         checked ? "bg-indigo-600" : "bg-gray-700"
@@ -73,7 +77,6 @@ const Settings = () => {
           checked ? "translate-x-7" : "translate-x-0"
         } group-hover:scale-110`}
       ></div>
-      {/* Geometric accents */}
       <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-white/20"></div>
       <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-white/20"></div>
     </button>
@@ -115,30 +118,20 @@ const Settings = () => {
         "bg-red-600/80 hover:bg-red-600 text-white border-2 border-red-500/50 hover:border-red-500 backdrop-blur-sm",
     };
 
-    const handleClick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (onClick) onClick(e);
-    };
-
     return (
       <button
         type="button"
         className={`${base} ${variants[variant]} ${className}`}
-        onClick={handleClick}
+        onClick={onClick}
         {...props}
       >
-        {/* Corner accents for non-destructive buttons */}
         {variant !== "destructive" && (
           <>
             <div className="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-current opacity-30 group-hover:opacity-70 transition-opacity duration-300"></div>
             <div className="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-current opacity-30 group-hover:opacity-70 transition-opacity duration-300"></div>
           </>
         )}
-
         <span className="relative z-10">{children}</span>
-
-        {/* Hover shimmer effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
       </button>
     );
@@ -150,7 +143,7 @@ const Settings = () => {
       onChange={onChange}
       placeholder={placeholder}
       rows={4}
-      className="w-full bg-gray-800/60 backdrop-blur-sm text-white border border-gray-700/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300 hover:border-gray-600/70 resize-none"
+      className="w-full bg-gray-800/60 backdrop-blur-sh text-white border border-gray-700/50 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300 hover:border-gray-600/70 resize-none"
     ></textarea>
   );
 
@@ -168,7 +161,6 @@ const Settings = () => {
           : "bg-gray-900/60 border-gray-700/50 hover:bg-gray-900/80"
       }`}
     >
-      {/* Geometric corner accents */}
       <div
         className={`absolute top-0 left-0 w-6 h-6 border-l-4 border-t-4 ${
           danger ? "border-red-500" : "border-gray-500"
@@ -179,14 +171,10 @@ const Settings = () => {
           danger ? "border-red-500" : "border-gray-500"
         }`}
       ></div>
-
-      {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-4 right-4 w-12 h-12 border border-gray-400 rotate-45"></div>
         <div className="absolute bottom-4 left-4 w-8 h-8 border border-gray-500"></div>
       </div>
-
-      {/* Header */}
       <div className="flex items-center gap-4 mb-6 relative z-10">
         <div
           className={`w-12 h-12 rounded-xl border flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${
@@ -208,18 +196,13 @@ const Settings = () => {
           {description && <p className="text-gray-400 mt-1">{description}</p>}
         </div>
       </div>
-
-      {/* Content */}
       <div className="relative z-10">{children}</div>
-
-      {/* Animated shimmer effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
     </section>
   );
 
   return (
-    <div className="min-h-screen h-screen overflow-y-auto bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden">
-      {/* Geometric background pattern */}
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black relative overflow-y-auto max-h-screen">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-20 w-32 h-32 border border-gray-500 rotate-45"></div>
         <div className="absolute top-40 right-40 w-24 h-24 border border-gray-600 rotate-12"></div>
@@ -227,25 +210,17 @@ const Settings = () => {
         <div className="absolute bottom-20 right-20 w-20 h-20 border border-gray-500 rotate-45"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 border border-gray-500 opacity-20"></div>
       </div>
-
       <div className="relative z-10 max-w-5xl mx-auto space-y-10 p-8">
-        {/* Header */}
         <div className="relative">
-          {/* Geometric accent */}
           <div className="absolute top-0 left-0 w-24 h-1 bg-gradient-to-r from-white via-gray-400 to-transparent opacity-30"></div>
-
           <h1 className="text-4xl font-black text-white mb-3 tracking-tight">
             Settings
           </h1>
           <p className="text-xl text-gray-400 font-light">
             Customize your Oracyn experience
           </p>
-
-          {/* Corner accent */}
           <div className="absolute -bottom-2 right-0 w-6 h-6 border-r-2 border-b-2 border-gray-600 opacity-30"></div>
         </div>
-
-        {/* Profile Section */}
         <SettingsSection
           title="Profile Information"
           description="Manage your personal details and preferences"
@@ -303,8 +278,6 @@ const Settings = () => {
             </div>
           </div>
         </SettingsSection>
-
-        {/* Security Section */}
         <SettingsSection
           title="Security"
           description="Protect your account with strong security settings"
@@ -341,10 +314,8 @@ const Settings = () => {
               />
             </div>
           </div>
-
           <div className="space-y-6">
             <Button variant="secondary">Change Password</Button>
-
             <div className="flex items-center justify-between p-4 bg-gray-800/40 border border-gray-700/30 rounded-xl">
               <div>
                 <Label>Two-Factor Authentication</Label>
@@ -357,7 +328,6 @@ const Settings = () => {
                 onCheckedChange={(v) => handleChange("twoFactor", v)}
               />
             </div>
-
             <div>
               <Label>Session Timeout (hours)</Label>
               <Input
@@ -369,8 +339,6 @@ const Settings = () => {
             </div>
           </div>
         </SettingsSection>
-
-        {/* AI & Processing Section */}
         <SettingsSection
           title="AI & Processing"
           description="Configure your AI model preferences and processing settings"
@@ -386,7 +354,6 @@ const Settings = () => {
                 placeholder="sk-..."
               />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <Label>AI Model</Label>
@@ -420,7 +387,6 @@ const Settings = () => {
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center justify-between p-4 bg-gray-800/40 border border-gray-700/30 rounded-xl">
                 <div>
@@ -434,7 +400,6 @@ const Settings = () => {
                   onCheckedChange={(v) => handleChange("autoSummary", v)}
                 />
               </div>
-
               <div className="flex items-center justify-between p-4 bg-gray-800/40 border border-gray-700/30 rounded-xl">
                 <div>
                   <Label>Smart Data Extraction</Label>
@@ -450,8 +415,6 @@ const Settings = () => {
             </div>
           </div>
         </SettingsSection>
-
-        {/* Notifications Section */}
         <SettingsSection
           title="Notifications"
           description="Manage how you receive updates and alerts"
@@ -470,7 +433,6 @@ const Settings = () => {
                 onCheckedChange={(v) => handleChange("emailAlerts", v)}
               />
             </div>
-
             <div className="flex items-center justify-between p-4 bg-gray-800/40 border border-gray-700/30 rounded-xl">
               <div>
                 <Label>Weekly Reports</Label>
@@ -485,8 +447,6 @@ const Settings = () => {
             </div>
           </div>
         </SettingsSection>
-
-        {/* Data & Privacy Section */}
         <SettingsSection
           title="Data & Privacy"
           description="Control how your data is stored and used"
@@ -505,7 +465,6 @@ const Settings = () => {
                 How long to keep your data before automatic deletion
               </p>
             </div>
-
             <div className="flex items-center justify-between p-4 bg-gray-800/40 border border-gray-700/30 rounded-xl">
               <div>
                 <Label>Analytics Sharing</Label>
@@ -520,8 +479,6 @@ const Settings = () => {
             </div>
           </div>
         </SettingsSection>
-
-        {/* Danger Zone */}
         <SettingsSection
           title="Danger Zone"
           description="Irreversible actions - proceed with caution"
@@ -541,9 +498,7 @@ const Settings = () => {
             <Button variant="destructive">Delete Account</Button>
           </div>
         </SettingsSection>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-6">
+        <div className="flex flex-col sm:flex-row gap-4 pt-6 pb-8">
           <Button variant="default" className="flex items-center gap-2">
             <Save className="w-5 h-5" />
             Save All Changes

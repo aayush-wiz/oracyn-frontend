@@ -15,8 +15,14 @@ import {
 
 const HistoryModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { chats, activeChat, setActiveChat, deleteChat, getChatCharts } =
-    useStore();
+  const {
+    chats,
+    activeChat,
+    setActiveChat,
+    deleteChat,
+    getChatCharts,
+    getOrCreateEmptyChat,
+  } = useStore();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -39,15 +45,26 @@ const HistoryModal = ({ isOpen, onClose }) => {
 
   const handleDeleteChat = (chatId, e) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this chat?")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this chat? This will also delete all associated charts and documents."
+      )
+    ) {
       deleteChat(chatId);
+
       if (activeChat === chatId) {
-        // If we deleted the active chat, navigate to the first remaining chat or create new
+        // If we deleted the active chat, navigate to existing chat or create new one
         const remainingChats = chats.filter((chat) => chat.id !== chatId);
         if (remainingChats.length > 0) {
           handleChatSelect(remainingChats[0].id);
         } else {
-          navigate("/chat");
+          // No chats left, create a new one and navigate to it
+          const newChatId = getOrCreateEmptyChat();
+          if (newChatId) {
+            navigate(`/chat/${newChatId}`);
+          } else {
+            navigate("/chat");
+          }
           onClose();
         }
       }
@@ -110,7 +127,7 @@ const HistoryModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Chat List */}
-        <div className="flex-1 h-screen overflow-y-auto p-6 relative z-10">
+        <div className="flex-1 overflow-y-auto p-6 relative z-10 max-h-[calc(80vh-140px)]">
           {chats.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-20 h-20 bg-gray-800/40 border border-gray-700/50 rounded-2xl flex items-center justify-center mb-6">
@@ -119,9 +136,21 @@ const HistoryModal = ({ isOpen, onClose }) => {
               <h3 className="text-xl font-semibold text-gray-300 mb-2">
                 No chats yet
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mb-4">
                 Start your first conversation to see it here
               </p>
+              <button
+                onClick={() => {
+                  const newChatId = getOrCreateEmptyChat();
+                  if (newChatId) {
+                    navigate(`/chat/${newChatId}`);
+                    onClose();
+                  }
+                }}
+                className="px-6 py-3 bg-indigo-600/80 hover:bg-indigo-600 border border-indigo-500/50 text-white rounded-lg transition-all duration-300 hover:scale-105"
+              >
+                Create First Chat
+              </button>
             </div>
           ) : (
             <div className="grid gap-4">

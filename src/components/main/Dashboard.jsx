@@ -31,6 +31,7 @@ const Dashboard = () => {
     maxStorage,
     getOrCreateEmptyChat,
     getRecentActivities,
+    hasEmptyChat,
   } = useStore();
 
   // Calculate active chat sessions
@@ -119,12 +120,20 @@ const Dashboard = () => {
       icon: <MessageSquareIcon className="w-5 h-5" />,
       primary: true,
       action: () => {
+        // Check if there's already an empty chat
+        if (hasEmptyChat()) {
+          alert(
+            "You already have an empty chat. Please use it or add content before creating a new one."
+          );
+          return;
+        }
+
         const chatId = getOrCreateEmptyChat();
         if (chatId) {
           navigate(`/chat/${chatId}`);
         } else {
           alert(
-            "Maximum chat sessions reached. Please close an existing chat."
+            "Cannot create new chat. Either maximum chat sessions reached or you have an empty chat that needs to be used."
           );
         }
       },
@@ -331,10 +340,7 @@ const Dashboard = () => {
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 animate-shimmer"></div>
                         </div>
                       </div>
-                      {/* Percentage display */}
-                      <div className="absolute right-0 -top-6 text-xs text-gray-500 font-medium">
-                        {percent}%
-                      </div>
+                      {/* Removed percentage display to avoid overlap */}
                     </div>
                   </div>
                 );

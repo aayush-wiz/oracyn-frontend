@@ -1,4 +1,3 @@
-// components/main/chat/ChatComponents/ChartSidebar.jsx
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useStore from "../../../../store/useStore";
@@ -9,8 +8,6 @@ import {
   Activity,
   TrendingUp,
   ExternalLink,
-  ChevronRight,
-  ChevronLeft,
 } from "lucide-react";
 
 const ChartSidebar = ({ chatId }) => {
@@ -54,14 +51,10 @@ const ChartSidebar = ({ chatId }) => {
     navigate(`?${newParams.toString()}`, { replace: true });
   };
 
-  // Always show sidebar, even if no charts yet
-  // if (chatCharts.length === 0) return null;
-
   return (
     <aside
-      className={`h-full bg-gray-900/40 backdrop-blur-xl border-l border-gray-700/30 transition-all duration-500 ease-in-out relative overflow-hidden ${
-        isExpanded ? "w-80" : "w-16"
-      }`}
+      style={{ width: isExpanded ? "22rem" : "5rem" }}
+      className={`h-full absolute right-0 top-0 z-30 bg-gray-900/40 backdrop-blur-xl border-l border-gray-700/30 transition-all duration-500 ease-in-out overflow-hidden`}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
     >
@@ -70,17 +63,6 @@ const ChartSidebar = ({ chatId }) => {
         <div className="absolute top-8 right-4 w-8 h-8 border border-gray-400 rotate-45"></div>
         <div className="absolute bottom-12 left-4 w-6 h-6 border border-gray-500"></div>
         <div className="absolute top-1/2 left-2 w-4 h-4 border border-gray-600 rotate-12"></div>
-      </div>
-
-      {/* Expand/Collapse indicator */}
-      <div className="absolute top-1/2 -left-3 transform -translate-y-1/2 z-20">
-        <div className="w-6 h-12 bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-l-lg flex items-center justify-center">
-          {isExpanded ? (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 text-gray-400" />
-          )}
-        </div>
       </div>
 
       <div className="flex flex-col h-full p-4 relative z-10">
@@ -103,7 +85,7 @@ const ChartSidebar = ({ chatId }) => {
         </div>
 
         {/* Charts List */}
-        <div className="flex-1 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
           {chatCharts.length === 0 ? (
             <div className="text-center py-8">
               {isExpanded && (
@@ -128,12 +110,10 @@ const ChartSidebar = ({ chatId }) => {
                   key={chart.id}
                   onClick={() => handleViewChart(chart)}
                   className={`
-                    group/chart relative cursor-pointer transition-all duration-300 overflow-hidden
-                    ${!isExpanded ? "flex justify-center" : ""}
-                    ${isSelected ? "transform scale-105" : "hover:scale-105"}
-                  `}
+    group/chart relative cursor-pointer transition-all duration-300 overflow-hidden
+    ${!isExpanded ? "flex justify-center" : ""}
+  `}
                 >
-                  {/* Chart item background */}
                   <div
                     className={`
                     p-3 rounded-xl border backdrop-blur-sm transition-all duration-300
@@ -144,12 +124,10 @@ const ChartSidebar = ({ chatId }) => {
                     }
                   `}
                   >
-                    {/* Geometric corner accents */}
                     <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-current opacity-20 group-hover/chart:opacity-60 transition-opacity duration-300"></div>
                     <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-current opacity-20 group-hover/chart:opacity-60 transition-opacity duration-300"></div>
 
                     <div className="flex items-center gap-3">
-                      {/* Chart icon */}
                       <div
                         className={`
                           w-10 h-10 rounded-lg border flex items-center justify-center transition-all duration-300
@@ -176,7 +154,6 @@ const ChartSidebar = ({ chatId }) => {
                       )}
                     </div>
 
-                    {/* Animated hover effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover/chart:translate-x-full transition-transform duration-700"></div>
                   </div>
                 </div>
@@ -193,14 +170,12 @@ const ChartSidebar = ({ chatId }) => {
                 onClick={() => navigate("/charts")}
                 className="w-full group relative flex items-center justify-between px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-300 overflow-hidden"
               >
-                {/* Geometric accents */}
                 <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-gray-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-gray-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                 <span className="relative z-10">View all charts</span>
-                <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" />
+                <ExternalLink className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" />
 
-                {/* Hover background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-700/20 to-transparent transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
               </button>
             ) : (
@@ -212,7 +187,7 @@ const ChartSidebar = ({ chatId }) => {
         )}
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         @keyframes fade-in {
           from {
             opacity: 0;

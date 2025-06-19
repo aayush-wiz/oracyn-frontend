@@ -149,7 +149,17 @@ const ChartGallery = () => {
 
   const handleDeleteChart = (chartId, e) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this chart?")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this chart? This action cannot be undone."
+      )
+    ) {
+      // If the chart being deleted is currently selected, close the modal
+      if (selectedChart && selectedChart.id === chartId) {
+        setSelectedChart(null);
+      }
+
+      // Delete the chart from the store
       deleteChart(chartId);
     }
   };
@@ -384,10 +394,18 @@ const ChartGallery = () => {
                   </button>
 
                   <button
-                    onClick={() => setSelectedChart(null)}
+                    onClick={(e) => handleDeleteChart(selectedChart.id, e)}
                     className="group p-2 bg-red-900/30 hover:bg-red-800/50 border border-red-700/50 hover:border-red-600/70 rounded-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+                    title="Delete Chart"
                   >
-                    <X className="w-5 h-5 text-red-300 group-hover:text-red-200" />
+                    <Trash2 className="w-5 h-5 text-red-300 group-hover:text-red-200" />
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedChart(null)}
+                    className="group p-2 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 hover:border-gray-500/70 rounded-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+                  >
+                    <X className="w-5 h-5 text-gray-300 group-hover:text-white" />
                   </button>
                 </div>
               </div>

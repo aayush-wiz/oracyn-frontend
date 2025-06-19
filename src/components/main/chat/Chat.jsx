@@ -11,6 +11,8 @@ import {
   MessageSquare,
   History,
   AlertTriangle,
+  Upload,
+  X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ChartSidebar from "./ChatComponents/ChartSidebar";
@@ -25,14 +27,18 @@ const Chat = () => {
   const [message, setMessage] = useState("");
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showDocumentRequired, setShowDocumentRequired] = useState(false);
+  const [documentModalDismissed, setDocumentModalDismissed] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [showNewChatWarning, setShowNewChatWarning] = useState(false);
   const bottomRef = useRef(null);
+  const [navigationHandled, setNavigationHandled] = useState(false);
 
   const {
     chats,
     activeChat,
+    charts,
     createChat,
     setActiveChat,
     updateChat,
@@ -43,6 +49,9 @@ const Chat = () => {
     updateProcessingSpeed,
     getCurrentChat,
     initializeStore,
+    hasEmptyChat,
+    isChatEmpty,
+    getOrCreateEmptyChat,
   } = useStore();
 
   const currentChat = getCurrentChat();
@@ -52,41 +61,94 @@ const Chat = () => {
     initializeStore();
   }, [initializeStore]);
 
-  // Handle routing and chat management
+  // Handle routing and chat management - Fixed to prevent infinite loops
   useEffect(() => {
-    if (!id && chats.length === 0) {
-      const newChatId = createChat();
-      if (newChatId) {
-        navigate(`/chat/${newChatId}`, { replace: true });
-      }
-    } else if (!id && chats.length > 0) {
-      setActiveChat(chats[0].id);
-      navigate(`/chat/${chats[0].id}`, { replace: true });
-    } else if (id && !currentChat) {
-      if (chats.length > 0) {
-        setActiveChat(chats[0].id);
-        navigate(`/chat/${chats[0].id}`, { replace: true });
-      } else {
-        const newChatId = createChat();
-        if (newChatId) {
-          navigate(`/chat/${newChatId}`, { replace: true });
-        }
-      }
-    } else if (id && currentChat && activeChat !== id) {
-      setActiveChat(id);
-    }
-  }, [id, chats, currentChat, activeChat, createChat, setActiveChat, navigate]);
+    // Prevent navigation handling if already handled or if we're in the middle of navigation
+    if (navigationHandled) return;
 
-  // Show file upload modal for new chats without documents
+    const timeoutId = setTimeout(() => {
+      try {
+        // Case 1: No ID in URL and no chats exist - create first chat
+        if (!id && chats.length === 0) {
+          const newChatId = getOrCreateEmptyChat();
+          if (newChatId) {
+            navigate(`/chat/${newChatId}`, { replace: true });
+            setNavigationHandled(true);
+          }
+          return;
+        }
+
+        // Case 2: No ID in URL but chats exist - go to first available chat
+        if (!id && chats.length > 0) {
+          const emptyChat = chats.find((chat) => isChatEmpty(chat));
+          const targetChat = emptyChat || chats[0];
+          setActiveChat(targetChat.id);
+          navigate(`/chat/${targetChat.id}`, { replace: true });
+          setNavigationHandled(true);
+          return;
+        }
+
+        // Case 3: ID provided but chat doesn't exist (deleted scenario)
+        if (id && chats.length > 0) {
+          const chatExists = chats.find((chat) => chat.id === id);
+          if (!chatExists) {
+            // Chat was deleted, navigate to first available chat
+            const firstChat = chats[0];
+            setActiveChat(firstChat.id);
+            navigate(`/chat/${firstChat.id}`, { replace: true });
+            setNavigationHandled(true);
+            return;
+          }
+        }
+
+        // Case 4: ID provided, no chats exist - create new chat
+        if (id && chats.length === 0) {
+          const newChatId = getOrCreateEmptyChat();
+          if (newChatId) {
+            navigate(`/chat/${newChatId}`, { replace: true });
+            setNavigationHandled(true);
+          }
+          return;
+        }
+
+        // Case 5: Valid chat ID, just sync active chat
+        if (id && currentChat && activeChat !== id) {
+          setActiveChat(id);
+          setNavigationHandled(true);
+          return;
+        }
+
+        // Case 6: Everything is in sync
+        if (id && currentChat && activeChat === id) {
+          setNavigationHandled(true);
+          return;
+        }
+      } catch (error) {
+        console.error("Navigation error:", error);
+        setNavigationHandled(true);
+      }
+    }, 0); // Use setTimeout to prevent immediate state updates
+
+    return () => clearTimeout(timeoutId);
+  }, [id, chats.length]); // Removed currentChat?.id and activeChat to prevent loops
+
+  // Reset navigation handled when route changes
+  useEffect(() => {
+    setNavigationHandled(false);
+    setDocumentModalDismissed(false); // Reset for each chat
+  }, [id]);
+
+  // Show file upload modal for new chats without documents (only once)
   useEffect(() => {
     if (
       currentChat &&
       !currentChat.document &&
-      currentChat.messages.length <= 1
+      currentChat.messages.length <= 1 &&
+      !showDocumentRequired
     ) {
       setShowFileUpload(true);
     }
-  }, [currentChat]);
+  }, [currentChat?.id]); // Only trigger when chat ID changes, not on other state updates
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -94,6 +156,14 @@ const Chat = () => {
   }, [currentChat?.messages]);
 
   const handleNewChat = () => {
+    // Check if there's already an empty chat
+    if (hasEmptyChat()) {
+      alert(
+        "You already have an empty chat. Please use it or add content before creating a new one."
+      );
+      return;
+    }
+
     // Check if current chat has user messages (not just welcome message)
     const hasUserMessages =
       currentChat && currentChat.messages.some((msg) => msg.sender === "user");
@@ -107,19 +177,40 @@ const Chat = () => {
     if (newChatId) {
       navigate(`/chat/${newChatId}`);
       setShowFileUpload(true);
+      setShowDocumentRequired(false);
+    } else {
+      alert(
+        "Cannot create new chat. Either maximum chat sessions reached or you have an empty chat that needs to be used."
+      );
+    }
+  };
+
+  const handleForceNewChat = () => {
+    // Only allow if no empty chat exists
+    if (hasEmptyChat()) {
+      alert(
+        "You have an empty chat. Please use it or add content before creating a new one."
+      );
+      setShowNewChatWarning(false);
+      return;
+    }
+
+    const newChatId = createChat();
+    if (newChatId) {
+      navigate(`/chat/${newChatId}`);
+      setShowFileUpload(true);
+      setShowDocumentRequired(false);
+      setShowNewChatWarning(false);
     } else {
       alert("Maximum chat sessions reached. Please close an existing chat.");
     }
   };
 
-  const handleForceNewChat = () => {
-    const newChatId = createChat();
-    if (newChatId) {
-      navigate(`/chat/${newChatId}`);
-      setShowFileUpload(true);
-      setShowNewChatWarning(false);
-    } else {
-      alert("Maximum chat sessions reached. Please close an existing chat.");
+  const handleFileUploadClose = () => {
+    setShowFileUpload(false);
+    // Only show document required modal if user hasn't dismissed it before for this chat
+    if (currentChat && !currentChat.document && !documentModalDismissed) {
+      setShowDocumentRequired(true);
     }
   };
 
@@ -148,7 +239,13 @@ const Chat = () => {
       });
 
       setShowFileUpload(false);
+      setShowDocumentRequired(false);
     }
+  };
+
+  const handleDocumentRequiredUpload = () => {
+    setShowDocumentRequired(false);
+    setShowFileUpload(true);
   };
 
   const handleSendMessage = async () => {
@@ -189,6 +286,21 @@ const Chat = () => {
   };
 
   const handleChartTrigger = (chartConfig) => {
+    // Check if a chart with the same type and label already exists for this chat
+    const existingChart = charts.find(
+      (chart) =>
+        chart.chatId === currentChat.id &&
+        chart.type === chartConfig.type &&
+        chart.label === chartConfig.label
+    );
+
+    if (existingChart) {
+      // If chart already exists, just navigate to it instead of creating a new one
+      navigate(`?selected=${existingChart.id}`, { replace: false });
+      return;
+    }
+
+    // Only create new chart if it doesn't exist
     const mockData = generateMockChartData(chartConfig.type);
     const newChart = createChart({
       ...chartConfig,
@@ -472,6 +584,24 @@ What specific aspect would you like me to focus on?`;
             <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </button>
+
+          {/* Upload Document Button - Only show if no document uploaded */}
+          {!currentChat.document && (
+            <button
+              onClick={() => setShowFileUpload(true)}
+              className="group relative bg-transparent border-2 border-blue-600 text-white px-4 py-3 font-semibold overflow-hidden transition-all duration-500 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/20 hover:scale-105"
+            >
+              <div className="absolute inset-0 bg-blue-600 transform -skew-x-12 -translate-x-full transition-transform duration-500 group-hover:translate-x-0"></div>
+              <span className="relative z-10 flex items-center gap-2 transition-colors duration-500 group-hover:text-white">
+                <Upload className="w-5 h-5" />
+                Upload Document
+              </span>
+
+              {/* Corner accents */}
+              <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            </button>
+          )}
         </div>
       </div>
 
@@ -480,6 +610,44 @@ What specific aspect would you like me to focus on?`;
         {/* Main Chat Content */}
         <div className="flex-1 overflow-y-auto px-8 py-6 relative z-10">
           <div className="max-w-4xl mx-auto space-y-8">
+            {/* No Document Notice - Less intrusive than modal */}
+            {!currentChat.document &&
+              !showFileUpload &&
+              !showDocumentRequired && (
+                <div className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/30 rounded-xl p-6 backdrop-blur-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-600/20 border border-blue-500/50 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white font-semibold mb-1">
+                        No Document Uploaded
+                      </h3>
+                      <p className="text-gray-300 text-sm">
+                        Upload a document to start analyzing data and creating
+                        charts. You can also navigate to other chats or the
+                        dashboard.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowFileUpload(true)}
+                        className="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 border border-blue-500/50 text-white rounded-lg transition-all duration-300 hover:scale-105 text-sm"
+                      >
+                        <Upload className="w-4 h-4 inline mr-1" />
+                        Upload
+                      </button>
+                      <button
+                        onClick={() => setShowHistory(true)}
+                        className="px-4 py-2 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 text-gray-300 rounded-lg transition-all duration-300 hover:scale-105 text-sm"
+                      >
+                        Other Chats
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             {currentChat.messages?.map((msg, index) => (
               <div
                 key={msg.id}
@@ -580,9 +748,13 @@ What specific aspect would you like me to focus on?`;
             <button
               onClick={handleSendMessage}
               disabled={!message.trim() || !currentChat.document}
-              className="group relative p-3 bg-indigo-600/80 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/30 backdrop-blur-sm"
+              className="relative group p-3 overflow-hidden text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all duration-300 bg-indigo-600/80 border border-indigo-400/20"
             >
-              <Send className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-300" />
+              {/* Bottom-to-top background hover animation */}
+              <span className="absolute inset-0 bg-indigo-500 transition-all duration-300 origin-bottom scale-y-0 group-hover:scale-y-100 z-0" />
+
+              {/* Send Icon */}
+              <Send className="w-6 h-6 relative z-10 transition-transform duration-300" />
             </button>
           </div>
         </div>
@@ -592,9 +764,99 @@ What specific aspect would you like me to focus on?`;
       {showFileUpload && (
         <FileUploadModal
           isOpen={showFileUpload}
-          onClose={() => setShowFileUpload(false)}
+          onClose={handleFileUploadClose}
           onUpload={handleFileUpload}
         />
+      )}
+
+      {/* Document Required Modal */}
+      {showDocumentRequired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black border border-gray-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative overflow-hidden">
+            {/* Geometric background pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="absolute top-4 left-4 w-8 h-8 border border-gray-400 rotate-45"></div>
+              <div className="absolute bottom-4 right-4 w-6 h-6 border border-gray-500"></div>
+            </div>
+
+            {/* Corner accents */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-l-4 border-t-4 border-blue-500"></div>
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-r-4 border-b-4 border-blue-500"></div>
+
+            <div className="p-6 relative z-10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-blue-600/20 border border-blue-500/50 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Document Required
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    This chat needs a document to function
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-300 mb-6">
+                This chat requires a document to analyze and create charts. You
+                can upload one now, or navigate to another chat that already has
+                a document.
+              </p>
+
+              <div className="space-y-3">
+                {/* Primary action - Upload */}
+                <button
+                  onClick={handleDocumentRequiredUpload}
+                  className="w-full group relative bg-transparent border-2 border-blue-600 text-white px-4 py-3 font-semibold overflow-hidden transition-all duration-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-105"
+                >
+                  <div className="absolute inset-0 bg-blue-600 transform -skew-x-12 -translate-x-full transition-transform duration-500 group-hover:translate-x-0"></div>
+                  <span className="relative z-10 transition-colors duration-500 group-hover:text-white">
+                    <Upload className="w-4 h-4 inline mr-2" />
+                    Upload Document
+                  </span>
+                </button>
+
+                {/* Secondary actions */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setShowDocumentRequired(false);
+                      setShowHistory(true);
+                      setDocumentModalDismissed(true);
+                    }}
+                    className="px-3 py-2 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 hover:border-gray-500/70 text-white rounded-lg transition-all duration-300 hover:scale-105 text-sm"
+                  >
+                    <MessageSquare className="w-4 h-4 inline mr-1" />
+                    Other Chats
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDocumentRequired(false);
+                      setDocumentModalDismissed(true);
+                      navigate("/");
+                    }}
+                    className="px-3 py-2 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 hover:border-gray-500/70 text-white rounded-lg transition-all duration-300 hover:scale-105 text-sm"
+                  >
+                    📊 Dashboard
+                  </button>
+                </div>
+
+                {/* Dismiss option */}
+                <button
+                  onClick={() => {
+                    setShowDocumentRequired(false);
+                    setDocumentModalDismissed(true);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-800/40 hover:bg-gray-700/60 border border-gray-700/30 hover:border-gray-600/50 text-gray-400 hover:text-gray-300 rounded-lg transition-all duration-300 text-sm"
+                >
+                  <X className="w-4 h-4 inline mr-2" />
+                  Continue without document (limited functionality)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* History Modal */}
