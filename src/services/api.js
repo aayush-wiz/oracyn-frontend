@@ -188,6 +188,50 @@ export const chatAPI = {
   },
 };
 
+export const chartAPI = {
+  // Get all charts for a chat
+  getCharts: async (token, chatId) => {
+    const response = await fetch(`${API_BASE_URL}/api/chats/${chatId}/charts`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return handleResponse(response);
+  },
+
+  // Create a new chart
+  createChart: async (token, chatId, { prompt, chartType, label }) => {
+    const response = await fetch(`${API_BASE_URL}/api/charts`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chatId,
+        prompt,
+        chartType,
+        label,
+      }),
+    });
+    return handleResponse(response);
+  },
+
+  // Delete a chart
+  deleteChart: async (token, chartId) => {
+    const response = await fetch(`${API_BASE_URL}/api/charts/${chartId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return handleResponse(response);
+  },
+};
+
 export const fileAPI = {
   // Upload file to chat
   uploadFile: async (token, chatId, file, onProgress) => {
@@ -211,4 +255,5 @@ export const api = {
   auth: authAPI,
   chat: chatAPI,
   file: fileAPI,
+  chart: chartAPI,
 };

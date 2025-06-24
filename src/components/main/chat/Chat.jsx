@@ -13,12 +13,14 @@ import {
   AlertTriangle,
   Upload,
   X,
+  LayoutGrid,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ChartSidebar from "./ChatComponents/ChartSidebar";
 import FileUploadModal from "../../ui/FileUploadModal";
 import ChartDisplayModal from "./ChatComponents/ChartDisplayModal";
 import HistoryModal from "../HistoryModal";
+import { ChartList } from '../ChartList';
 
 const Chat = () => {
   const { id } = useParams();
@@ -32,6 +34,7 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [showNewChatWarning, setShowNewChatWarning] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'charts'
   const bottomRef = useRef(null);
   const [navigationHandled, setNavigationHandled] = useState(false);
 
@@ -605,160 +608,156 @@ What specific aspect would you like me to focus on?`;
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Main Chat Content */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 relative z-10">
-          <div className="max-w-4xl mx-auto space-y-8">
-            {/* No Document Notice - Less intrusive than modal */}
-            {!currentChat.document &&
-              !showFileUpload &&
-              !showDocumentRequired && (
-                <div className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/30 rounded-xl p-6 backdrop-blur-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-600/20 border border-blue-500/50 rounded-xl flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-blue-400" />
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-800">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`px-6 py-4 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'chat' 
+                ? 'text-white border-b-2 border-blue-500' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Chat
+          </button>
+          <button
+            onClick={() => setActiveTab('charts')}
+            className={`px-6 py-4 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'charts' 
+                ? 'text-white border-b-2 border-blue-500' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Charts
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'chat' ? (
+            // Existing chat messages
+            <div className="max-w-4xl mx-auto space-y-8">
+              {currentChat.messages?.map((msg, index) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${
+                    msg.sender === "user" ? "justify-end" : "justify-start"
+                  } group`}
+                >
+                  <div
+                    className={`flex gap-4 max-w-[80%] ${
+                      msg.sender === "user" ? "flex-row-reverse" : "flex-row"
+                    }`}
+                  >
+                    <div className="flex-shrink-0 relative">
+                      <div className="w-10 h-10 rounded-lg bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center group-hover:border-gray-600/70 transition-all duration-300">
+                        {msg.sender === "user" ? (
+                          <UserCircle className="w-6 h-6 text-gray-300" />
+                        ) : (
+                          <Bot className="w-6 h-6 text-indigo-400" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-semibold mb-1">
-                        No Document Uploaded
-                      </h3>
-                      <p className="text-gray-300 text-sm">
-                        Upload a document to start analyzing data and creating
-                        charts. You can also navigate to other chats or the
-                        dashboard.
-                      </p>
+                    <div
+                      className={`rounded-xl px-6 py-4 backdrop-blur-sm transition-all duration-300 group-hover:scale-[1.02] relative overflow-hidden ${
+                        msg.sender === "user"
+                          ? "bg-indigo-600/80 text-white border border-indigo-500/50"
+                          : "bg-gray-800/80 text-gray-100 border border-gray-700/50"
+                      }`}
+                    >
+                      {/* Geometric background pattern */}
+                      <div className="absolute inset-0 opacity-5">
+                        <div className="absolute top-2 right-2 w-4 h-4 border border-current rotate-45"></div>
+                        <div className="absolute bottom-2 left-2 w-3 h-3 border border-current"></div>
+                      </div>
+
+                      <div className="relative z-10">
+                        {renderMessageContent(msg.text)}
+                      </div>
+                      <p className="text-xs mt-2 opacity-60">{msg.timestamp}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowFileUpload(true)}
-                        className="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 border border-blue-500/50 text-white rounded-lg transition-all duration-300 hover:scale-105 text-sm"
-                      >
-                        <Upload className="w-4 h-4 inline mr-1" />
-                        Upload
-                      </button>
-                      <button
-                        onClick={() => setShowHistory(true)}
-                        className="px-4 py-2 bg-gray-800/60 hover:bg-gray-700/80 border border-gray-600/50 text-gray-300 rounded-lg transition-all duration-300 hover:scale-105 text-sm"
-                      >
-                        Other Chats
-                      </button>
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-300">Assistant is thinking</span>
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" />
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100" />
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200" />
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
-
-            {currentChat.messages?.map((msg, index) => (
-              <div
-                key={msg.id}
-                className={`flex ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                } group`}
-              >
-                <div
-                  className={`flex gap-4 max-w-[80%] ${
-                    msg.sender === "user" ? "flex-row-reverse" : "flex-row"
-                  }`}
-                >
-                  <div className="flex-shrink-0 relative">
-                    <div className="w-10 h-10 rounded-lg bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center group-hover:border-gray-600/70 transition-all duration-300">
-                      {msg.sender === "user" ? (
-                        <UserCircle className="w-6 h-6 text-gray-300" />
-                      ) : (
-                        <Bot className="w-6 h-6 text-indigo-400" />
-                      )}
-                    </div>
-                  </div>
-                  <div
-                    className={`rounded-xl px-6 py-4 backdrop-blur-sm transition-all duration-300 group-hover:scale-[1.02] relative overflow-hidden ${
-                      msg.sender === "user"
-                        ? "bg-indigo-600/80 text-white border border-indigo-500/50"
-                        : "bg-gray-800/80 text-gray-100 border border-gray-700/50"
-                    }`}
-                  >
-                    {/* Geometric background pattern */}
-                    <div className="absolute inset-0 opacity-5">
-                      <div className="absolute top-2 right-2 w-4 h-4 border border-current rotate-45"></div>
-                      <div className="absolute bottom-2 left-2 w-3 h-3 border border-current"></div>
-                    </div>
-
-                    <div className="relative z-10">
-                      {renderMessageContent(msg.text)}
-                    </div>
-                    <p className="text-xs mt-2 opacity-60">{msg.timestamp}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-indigo-400" />
-                </div>
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-300">Assistant is thinking</span>
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" />
-                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100" />
-                      <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
-          </div>
+              <div ref={bottomRef} />
+            </div>
+          ) : (
+            // Charts tab content
+            <div className="max-w-6xl mx-auto">
+              <ChartList chatId={currentChat.id} />
+            </div>
+          )}
         </div>
-
-        {/* Chart Sidebar - Always visible when charts exist */}
-        <ChartSidebar chatId={currentChat.id} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-800/60 px-8 py-6 backdrop-blur-xl bg-black/40 relative z-10">
-        {/* Geometric accent */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent opacity-20"></div>
+      {/* Chart Sidebar - Only show in chat tab */}
+      {activeTab === 'chat' && <ChartSidebar chatId={currentChat.id} />}
 
-        <div className="max-w-4xl mx-auto">
-          <div
-            className={`flex items-center gap-4 bg-gray-900/60 backdrop-blur-sm rounded-xl px-6 py-4 border transition-all duration-500 ${
-              isFocused
-                ? "border-gray-500/80 shadow-lg shadow-white/10"
-                : "border-gray-700/50"
-            }`}
-          >
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              placeholder={
-                currentChat.document
-                  ? "Ask a question about your document..."
-                  : "Upload a document to start..."
-              }
-              disabled={!currentChat.document}
-              className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-lg"
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={!message.trim() || !currentChat.document}
-              className="relative group p-3 overflow-hidden text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all duration-300 bg-indigo-600/80 border border-indigo-400/20"
+      {/* Input Area - Only show in chat tab */}
+      {activeTab === 'chat' && (
+        <div className="border-t border-gray-800/60 px-8 py-6 backdrop-blur-xl bg-black/40 relative z-10">
+          {/* Geometric accent */}
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent opacity-20"></div>
+
+          <div className="max-w-4xl mx-auto">
+            <div
+              className={`flex items-center gap-4 bg-gray-900/60 backdrop-blur-sm rounded-xl px-6 py-4 border transition-all duration-500 ${
+                isFocused
+                  ? "border-gray-500/80 shadow-lg shadow-white/10"
+                  : "border-gray-700/50"
+              }`}
             >
-              {/* Bottom-to-top background hover animation */}
-              <span className="absolute inset-0 bg-indigo-500 transition-all duration-300 origin-bottom scale-y-0 group-hover:scale-y-100 z-0" />
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={
+                  currentChat.document
+                    ? "Ask a question about your document..."
+                    : "Upload a document to start..."
+                }
+                disabled={!currentChat.document}
+                className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-lg"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || !currentChat.document}
+                className="relative group p-3 overflow-hidden text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all duration-300 bg-indigo-600/80 border border-indigo-400/20"
+              >
+                {/* Bottom-to-top background hover animation */}
+                <span className="absolute inset-0 bg-indigo-500 transition-all duration-300 origin-bottom scale-y-0 group-hover:scale-y-100 z-0" />
 
-              {/* Send Icon */}
-              <Send className="w-6 h-6 relative z-10 transition-transform duration-300" />
-            </button>
+                {/* Send Icon */}
+                <Send className="w-6 h-6 relative z-10 transition-transform duration-300" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* File Upload Modal */}
       {showFileUpload && (
