@@ -351,7 +351,7 @@ const Chat = () => {
         }
       }
 
-      // Add the chart trigger button
+      // Add chart trigger button
       const [, type, label] = match;
       parts.push(
         <ChartTriggerButton
@@ -360,7 +360,6 @@ const Chat = () => {
           label={label.replace(/_/g, " ")}
         />
       );
-
       lastIndex = match.index + match[0].length;
     }
 
@@ -501,8 +500,6 @@ Would you like me to dive deeper into any specific area?`;
 Based on the document content, I can help you with:
 - **Data analysis** and insights extraction
 - **Creating visualizations** and charts
-- **Answering specific questions** about the content
-- **Generating summaries** and reports
 
 <chart-trigger type="bar" label="Data_Overview"></chart-trigger>
 
