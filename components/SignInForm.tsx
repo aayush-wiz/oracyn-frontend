@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TextGenerateEffect } from "./ui/text-generate-effect";
+import { PointerHighlight } from "./ui/pointer-highlight";
 
 const Signin = () => {
   const [formData, setFormData] = useState({
@@ -27,14 +28,14 @@ const Signin = () => {
       <div className="w-full max-w-md ">
         {/* Header */}
         <div className="text-center mb-4">
-          <h1 className="text-4xl">
-            <TextGenerateEffect duration={2} words="Join Oracyn Today" />
+          <h1 className="text-4xl flex items-center justify-center">
+            <PointerHighlight>Oracyn</PointerHighlight>
           </h1>
 
           <TextGenerateEffect
             filter={false}
             duration={1}
-            words=" Start your journey right away"
+            words=" Continue your where you started"
           />
         </div>
 
