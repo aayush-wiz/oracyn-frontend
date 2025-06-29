@@ -1,16 +1,53 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TextGenerateEffect } from "./ui/text-generate-effect";
 import { PointerHighlight } from "./ui/pointer-highlight";
+import { useAuth } from "../hooks/useAuth";
 
 const Signin = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const [error, setError] = useState<string | null>(null);
+
+  const { signin, user, isSigningIn, signinError } = useAuth();
+  const router = useRouter();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
+
+  // Effect to handle and format sign-in errors from the hook
+  useEffect(() => {
+    if (signinError) {
+      if (
+        typeof signinError === "object" &&
+        signinError !== null &&
+        "response" in signinError
+      ) {
+        const axiosError = signinError as {
+          response?: { data?: { message?: string; error?: string } };
+        };
+        setError(
+          axiosError.response?.data?.message ||
+            axiosError.response?.data?.error ||
+            "An unknown error occurred during sign-in."
+        );
+      } else if (signinError instanceof Error) {
+        setError(signinError.message);
+      } else {
+        setError("An unknown error occurred during sign-in.");
+      }
+    }
+  }, [signinError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -19,9 +56,28 @@ const Signin = () => {
     });
   };
 
-  const handleSubmit = () => {
-    console.log("Form submitted:", formData);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!formData.email || !formData.password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+    signin({ email: formData.email, password: formData.password });
   };
+
+  // Show loading spinner if user is authenticated and redirecting
+  if (user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
@@ -40,7 +96,10 @@ const Signin = () => {
         </div>
 
         {/* Form */}
-        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl p-8 shadow-2xl"
+        >
           <div className="space-y-6">
             {/* Email */}
             <div className="space-y-2">
@@ -52,6 +111,8 @@ const Signin = () => {
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={handleInputChange}
+                disabled={isSigningIn}
+                required
               />
             </div>
 
@@ -65,35 +126,53 @@ const Signin = () => {
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
+                disabled={isSigningIn}
+                required
               />
             </div>
 
-            {/* Submit button */}
+            {/* Error Message */}
+            {error && (
+              <div className="text-red-400 text-sm text-center bg-red-900/20 border border-red-600/20 rounded-lg p-3">
+                {error}
+              </div>
+            )}
 
-            <button className="w-full bg-slate-800 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6  text-white inline-block">
+            {/* Submit button */}
+            <button
+              type="submit"
+              className="w-full bg-slate-800 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSigningIn || !formData.email || !formData.password}
+            >
               <span className="absolute inset-0 overflow-hidden rounded-full">
                 <span className="absolute inset-0 rounded-full bg-gradient-to-r from-sky-400/0 via-sky-600/90 to-sky-600/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               </span>
-              <div
-                onClick={handleSubmit}
-                className="relative flex py-2 justify-center space-x-2 items-center z-10 rounded-full bg-zinc-950 px-4 ring-1 ring-white/10 "
-              >
-                <span className="text-lg">Login</span>
-                <svg
-                  fill="none"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  width="16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M10.75 8.75L14.25 12L10.75 15.25"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                  />
-                </svg>
+              <div className="relative flex py-2 justify-center space-x-2 items-center z-10 rounded-full bg-zinc-950 px-4 ring-1 ring-white/10">
+                {isSigningIn ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <span className="text-lg">Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-lg">Login</span>
+                    <svg
+                      fill="none"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M10.75 8.75L14.25 12L10.75 15.25"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  </>
+                )}
               </div>
               <span className="absolute -bottom-0 left-[1.125rem] h-px w-[calc(100%-2.25rem)] bg-gradient-to-r from-blue-400/0 via-blue-600/90 to-blue-600/0 transition-opacity duration-500 group-hover:opacity-40" />
             </button>
@@ -108,7 +187,7 @@ const Signin = () => {
 
           {/* Social login buttons */}
           <div className="mt-2 space-y-3">
-            <button className="flex items-center justify-center cursor-pointer w-full shadow-[inset_0_0_0_2px_#616467]px-6 py-2 bg-transparent text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400">
+            <button className="flex items-center justify-center cursor-pointer w-full shadow-[inset_0_0_0_2px_#616467] px-6 py-2 bg-transparent text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400">
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -131,7 +210,7 @@ const Signin = () => {
             </button>
           </div>
 
-          {/* Sign in link */}
+          {/* Sign up link */}
           <p className="mt-6 text-center text-sm text-gray-400">
             Don&apos;t have an account?{" "}
             <button className="text-white rounded-lg font-bold transform hover:-translate-y-1 transition duration-400">
@@ -143,7 +222,7 @@ const Signin = () => {
               </a>
             </button>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );
