@@ -1,86 +1,61 @@
 // hooks/useAuth.ts
 
-import React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { userAtom } from "../lib/atoms"; // We no longer need loadingAtom
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { userAtom, User } from "../lib/atoms";
 
-export function useAuth(pathname: string) {
-  const queryClient = useQueryClient();
+/**
+ * Provides access to the user state and authentication mutations (login, logout, signup).
+ * This hook DOES NOT fetch user data itself. It relies on the global state
+ * being initialized by the `AuthInitializer` in providers.tsx.
+ */
+export function useAuth() {
   const [user, setUser] = useAtom(userAtom);
+  const queryClient = useQueryClient();
 
-  const publicRoutes = ["/signin", "/signup"];
-  const isPublicRoute = publicRoutes.includes(pathname);
-
-  // This query's ONLY job is to verify the user's token on initial page load.
-  const { data, isLoading } = useQuery({
-    queryKey: ["auth"],
-    queryFn: api.getMe,
-    enabled: !isPublicRoute,
-    retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-  });
-
-  // This effect is now much simpler. It syncs the query result to the atom.
-  React.useEffect(() => {
-    if (!isLoading) {
-      if (data?.user) {
-        setUser(data.user);
-      } else {
-        setUser(null);
-      }
-    }
-  }, [isLoading, data, setUser]);
-
-  // The rest of the mutations remain the same...
-  const signupMutation = useMutation({
-    mutationFn: api.signup,
-    onSuccess: (responseData) => {
-      queryClient.setQueryData(["auth"], responseData);
-      setUser(responseData.user);
-    },
-  });
+  // --- MUTATIONS NOW MANAGE THE ENTIRE STATE ---
 
   const signinMutation = useMutation({
     mutationFn: api.signin,
-    onSuccess: (responseData) => {
-      queryClient.setQueryData(["auth"], responseData);
-      setUser(responseData.user);
+    onSuccess: (data: { user: User }) => {
+      // On successful sign-in, manually set the user in our global state.
+      // This provides instant feedback and prevents any need for a refetch.
+      setUser(data.user);
+    },
+  });
+
+  const signupMutation = useMutation({
+    mutationFn: api.signup,
+    onSuccess: (data: { user: User }) => {
+      setUser(data.user);
     },
   });
 
   const signoutMutation = useMutation({
     mutationFn: api.signout,
     onSuccess: () => {
-      queryClient.setQueryData(["auth"], { user: null });
-      queryClient.removeQueries({
-        predicate: (query) => query.queryKey[0] !== "auth",
-      });
+      // On successful sign-out, clear ALL cached data and set user to null.
+      // No more /me calls will be triggered because this hook no longer has that query.
+      queryClient.clear();
       setUser(null);
     },
     onError: (error) => {
-      console.error("Signout API error:", error);
-      queryClient.setQueryData(["auth"], { user: null });
-      queryClient.removeQueries({
-        predicate: (query) => query.queryKey[0] !== "auth",
-      });
+      console.error("Signout API error, logging out locally anyway:", error);
+      queryClient.clear();
       setUser(null);
     },
   });
 
   return {
-    user,
-    // CRITICAL FIX: The loading state is now directly from the query. No more instability.
-    loading: isLoading,
-    signup: signupMutation.mutate,
+    user, // The user object (or null) from the global Jotai atom.
     signin: signinMutation.mutate,
+    signup: signupMutation.mutate,
     signout: signoutMutation.mutate,
-    isSigningUp: signupMutation.isPending,
     isSigningIn: signinMutation.isPending,
+    isSigningUp: signupMutation.isPending,
     isSigningOut: signoutMutation.isPending,
-    signupError: signupMutation.error as unknown,
     signinError: signinMutation.error as unknown,
+    signupError: signupMutation.error as unknown,
   };
 }

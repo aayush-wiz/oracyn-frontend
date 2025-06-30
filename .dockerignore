@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules
+.pnpm-store
+
+# Next.js build output
+.next
+dist
+build
+
+# Optional local environment variables
+.env.local
+.env.*.local
+
+# Test files
+cypress
+__tests__
+*.test.js
+*.spec.js
+
+# Config files
+.eslintrc.json
+.prettierrc
+tsconfig.tsbuildinfo
+
+# Misc
+README.md
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

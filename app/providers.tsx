@@ -1,59 +1,91 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState, useEffect } from "react"; // Import useEffect
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Provider as JotaiProvider } from "jotai";
+import { Provider as JotaiProvider, useSetAtom, useAtom } from "jotai"; // Import useAtom
+import { api } from "@/lib/api";
+import { userAtom, User } from "@/lib/atoms";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
-// Create a consistent, reusable loader component
 const FullPageLoader = () => (
   <div className="h-screen w-full bg-black flex items-center justify-center">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
   </div>
 );
 
+/**
+ * THIS IS THE KEY COMPONENT FOR THE FIX.
+ * It runs ONLY ONCE on initial client-side load.
+ * It calls `/me`, sets the initial user state, and then gets out of the way.
+ */
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const setUser = useSetAtom(userAtom);
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      try {
+        const data: { user: User } = await api.getMe();
+        if (data?.user) {
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        // This is an expected error if the user has no cookie.
+        setUser(null);
+      } finally {
+        // We have our definitive answer, stop loading.
+        setLoading(false);
+      }
+    };
+
+    checkUserSession();
+  }, [setUser]); // Empty dependency array ensures this runs ONLY ONCE.
+
+  if (loading) {
+    return <FullPageLoader />;
+  }
+
+  return <>{children}</>;
+}
+
+// AppLayoutController now simply consumes the state set by AuthInitializer
 function AppLayoutController({ children }: { children: React.ReactNode }) {
-  const [isMounted, setIsMounted] = useState(false); // --- HYDRATION FIX ---
+  const [user] = useAtom(userAtom);
+  const { signout } = useAuth();
   const pathname = usePathname();
-  const { user, loading, signout } = useAuth(pathname);
   const router = useRouter();
-
-  // This useEffect only runs once on the client, after initial render
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !user && !publicRoutes.includes(pathname)) {
-      router.push("/signin");
-    }
-  }, [user, loading, pathname, router]);
 
   const publicRoutes = ["/signin", "/signup"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // --- START OF THE RENDER LOGIC FIX ---
-  // On the server, and on the very first client render, isMounted will be false.
-  // This forces a consistent output between server and client, fixing the hydration error.
-  if (!isMounted) {
-    return <FullPageLoader />;
-  }
+  useEffect(() => {
+    // We check against `undefined` because that's the initial state of the atom
+    // before the AuthInitializer has finished.
+    if (user === undefined) return;
 
-  if (loading && !isPublicRoute) {
-    return <FullPageLoader />;
-  }
-
-  if (isPublicRoute) {
-    // If we're on a public route, and we have a user, redirect to dashboard.
-    // Otherwise, show the public page.
-    if (user) {
+    // Redirect a logged-in user from a public page
+    if (user && isPublicRoute) {
       router.push("/");
-      return <FullPageLoader />;
     }
-    return <>{children}</>;
+
+    // Redirect a logged-out user from a protected page
+    if (!user && !isPublicRoute) {
+      router.push("/signin");
+    }
+  }, [user, isPublicRoute, router]);
+
+  if (
+    user === undefined ||
+    (user && isPublicRoute) ||
+    (!user && !isPublicRoute)
+  ) {
+    return <FullPageLoader />;
   }
 
   if (user) {
@@ -71,17 +103,17 @@ function AppLayoutController({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If no other condition is met (e.g., protected route, no user, but not yet redirected), show loader.
-  return <FullPageLoader />;
+  return <>{children}</>;
 }
-// --- END OF THE RENDER LOGIC FIX ---
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <JotaiProvider>
       <QueryClientProvider client={queryClient}>
-        <AppLayoutController>{children}</AppLayoutController>
+        <AuthInitializer>
+          <AppLayoutController>{children}</AppLayoutController>
+        </AuthInitializer>
       </QueryClientProvider>
     </JotaiProvider>
   );

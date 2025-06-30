@@ -1,14 +1,22 @@
 import React from "react";
+import AllCharts from "@/components/AllCharts"; // Import the new component
 
 const AllChartsPage = () => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold">All Generated Charts</h1>
-      <p className="text-zinc-400 mt-2">
-        This page will display a gallery of all charts you have generated across
-        all chats.
-      </p>
-      {/* Chart gallery component will go here */}
+    <div className="w-full">
+      {/* Page Header */}
+      <div className="mb-10">
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+          Chart Gallery
+        </h1>
+        <p className="text-zinc-400">
+          Here are all the visualizations you have generated across all your
+          chats.
+        </p>
+      </div>
+
+      {/* The component that fetches and renders the chart grid */}
+      <AllCharts />
     </div>
   );
 };
