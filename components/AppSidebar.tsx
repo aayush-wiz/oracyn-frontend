@@ -1,4 +1,3 @@
-// eslint-disable @next/next/no-img-element
 "use client";
 
 import Link from "next/link";
@@ -15,13 +14,12 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
     createdAt: string;
     updatedAt: string;
   }
+
   const router = useRouter();
-
-  let counter = 1;
-
   const [chats, setChats] = useState<Chat[]>([]);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [titleInputs, setTitleInputs] = useState<Record<string, string>>({});
+  let counter = 1;
 
   const handledeleteChat = async (chatId: string) => {
     try {
@@ -31,8 +29,8 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
           withCredentials: true,
         }
       );
-      setChats(chats.filter((chat) => chat.id !== chatId));
-      router.push("/"); // Redirect to home after deletion
+      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      router.push("/");
     } catch (error) {
       console.error("Error deleting chat:", error);
     }
@@ -43,15 +41,9 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/chats`,
         { title: `New Chat ${counter++}` },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
-
-      // Optional: navigate to the newly created chat
       router.push(`/chats/${response.data.id}`);
-
-      // Refresh chat list in sidebar
       getChats();
     } catch (error) {
       console.error("Error creating new chat:", error);
@@ -69,14 +61,12 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
         { withCredentials: true }
       );
 
-      // update chats list
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === chatId ? { ...chat, title: response.data.title } : chat
         )
       );
-
-      setEditingChatId(null); // Exit edit mode
+      setEditingChatId(null);
     } catch (error) {
       console.error("Error updating chat title:", error);
     }
@@ -101,41 +91,40 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
   }, []);
 
   return (
-    <div className="bg-gray-900 w-50 h-full flex flex-col items-center justify-center border-r  py-4">
-      {/* Logo or Brand Name */}
-      <Link href="/" className="text-white hover:underline">
-        <div className="text-white font-bold text-2xl mb-4 underline ">
+    <div className="bg-slate-950 text-white w-64 h-screen flex flex-col justify-between border-r border-slate-800">
+      {/* Top Section */}
+      <div className="flex flex-col px-4 py-6 space-y-4">
+        <Link
+          href="/"
+          className="text-2xl font-bold underline text-center cursor-pointer"
+        >
           ORACYN
-        </div>
-      </Link>
-      {/* Navigation Links */}
-      <div className="mt-4 h-full w-full py-4 space-y-2 flex flex-col items-center justify-between">
-        <Button onClick={handleNewChat} className="cursor-pointer w-fit">
+        </Link>
+
+        <Button onClick={handleNewChat} className="w-full cursor-pointer">
           Create New Chat
         </Button>
-        {/* Main Navigation */}
-        <div className="flex flex-col space-y-2 w-full">
-          {/* Dashboard */}
-          <Link href="/" className="text-white hover:underline">
-            <Button className="cursor-pointer w-fit">Dashboard</Button>
+
+        <div className="flex flex-col gap-2">
+          <Link href="/" passHref>
+            <Button className="w-full cursor-pointer">Dashboard</Button>
           </Link>
-          {/* Charts */}
-          <Link href="/charts" className="text-white hover:underline">
-            <Button className="cursor-pointer w-fit">Charts</Button>
+          <Link href="/charts" passHref>
+            <Button className="w-full cursor-pointer">Charts</Button>
           </Link>
         </div>
+
         {/* Chat Section */}
-        <div className="flex flex-col my-4 h-full w-full bg-slate-950">
-          <span className="text-slate-400 text-md font-semibold px-4 py-2 flex items-center justify-center">
+        <div className="mt-6">
+          <h2 className="text-slate-400 text-sm font-semibold mb-2 text-center">
             Chats
-          </span>
-          <hr />
-          <div className="space-y-1 px-2">
+          </h2>
+          <div className="space-y-1 max-h-[calc(100vh-350px)] overflow-y-auto pr-1">
             {chats.length > 0 ? (
               chats.map((chat) => (
                 <div
                   key={chat.id}
-                  className="flex items-center justify-between gap-2 px-2 py-1 hover:bg-slate-800 rounded-md transition-colors duration-150"
+                  className="flex items-center justify-between gap-2 px-2 py-1 rounded-md hover:bg-slate-800 transition-all"
                 >
                   <Link
                     href={`/chats/${chat.id}`}
@@ -152,11 +141,11 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                           }))
                         }
                         placeholder="Enter chat title"
-                        className="w-full bg-transparent text-white placeholder:text-slate-400 border-b border-slate-600 focus:outline-none focus:border-slate-300 transition duration-200 text-sm sm:text-base"
+                        className="w-full bg-transparent text-white placeholder:text-slate-400 border-b border-slate-600 focus:outline-none focus:border-slate-300 text-sm"
                         autoFocus
                       />
                     ) : (
-                      <span className="truncate text-white text-sm sm:text-base block">
+                      <span className="truncate block text-sm">
                         {chat.title?.trim().length === 0
                           ? "Untitled Chat"
                           : chat.title.length > 25
@@ -165,18 +154,16 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                       </span>
                     )}
                   </Link>
-
-                  <div className="flex items-center gap-1 pl-2 shrink-0">
+                  <div className="flex items-center gap-1">
                     {editingChatId === chat.id ? (
                       <button
-                        className="p-1 rounded hover:bg-slate-700"
                         onClick={() => handleChatTitleChange(chat.id)}
+                        className="p-1 hover:bg-slate-700 rounded cursor-pointer"
                       >
                         <Check className="w-4 h-4 text-slate-400" />
                       </button>
                     ) : (
                       <button
-                        className="p-1 rounded hover:bg-slate-700"
                         onClick={() => {
                           setEditingChatId(chat.id);
                           setTitleInputs((prev) => ({
@@ -184,16 +171,17 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                             [chat.id]: chat.title,
                           }));
                         }}
+                        className="p-1 hover:bg-slate-700 rounded cursor-pointer"
                       >
                         <PenLine className="w-4 h-4 text-slate-400" />
                       </button>
                     )}
                     <button
-                      className="p-1 rounded hover:bg-slate-700"
                       onClick={(e) => {
                         e.stopPropagation();
                         handledeleteChat(chat.id);
                       }}
+                      className="p-1 hover:bg-slate-700 rounded cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4 text-slate-400" />
                     </button>
@@ -201,36 +189,31 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                 </div>
               ))
             ) : (
-              <span className="text-slate-300 text-sm px-4 py-2">
-                No chats available
-              </span>
+              <p className="text-slate-500 text-xs px-2">No chats available</p>
             )}
-          </div>
-        </div>
-
-        <div className="flex flex-col space-y-2 w-full">
-          {/* Settings */}
-          <Link href="/settings" className="text-white hover:underline">
-            <Button className="cursor-pointer w-fit">Settings</Button>
-          </Link>
-          {/* Charts */}
-          <div onClick={signout} className="text-white hover:underline">
-            <Button className="cursor-pointer w-fit">Sign Out</Button>
           </div>
         </div>
       </div>
 
-      <div className="mt-auto p-4 text-white">
-        <p>© 2025 ORACYN</p>
-        <p>
+      {/* Bottom Section */}
+      <div className="px-4 py-6 gap-0.5 flex flex-col space-y-2 border-t border-slate-800">
+        <Link href="/settings" passHref>
+          <Button className="w-full cursor-pointer">Settings</Button>
+        </Link>
+        <Button onClick={signout} className="w-full cursor-pointer">
+          Sign Out
+        </Button>
+        <div className="mt-4 text-xs text-center text-slate-500">
+          <p>© 2025 ORACYN</p>
           <a
             href="https://github.com/aayush-wiz"
             target="_blank"
-            className="text-white hover:underline"
+            rel="noopener noreferrer"
+            className="hover:underline"
           >
             GitHub
           </a>
-        </p>
+        </div>
       </div>
     </div>
   );
