@@ -17,11 +17,6 @@ const FullPageLoader = () => (
   </div>
 );
 
-/**
- * THIS IS THE KEY COMPONENT FOR THE FIX.
- * It runs ONLY ONCE on initial client-side load.
- * It calls `/me`, sets the initial user state, and then gets out of the way.
- */
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const setUser = useSetAtom(userAtom);

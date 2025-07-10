@@ -1,192 +1,239 @@
+// eslint-disable @next/next/no-img-element
 "use client";
 
-import React from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { useAtom } from "jotai";
-import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
-import { userAtom } from "@/lib/atoms";
-import { SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import {
-  IconLayoutDashboard,
-  IconMessages,
-  IconChartBar,
-  IconSettings,
-  IconPlus,
-  IconLogout,
-  IconHexagonLetterO,
-} from "@tabler/icons-react";
+import Link from "next/link";
+import Button from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { Trash2, Check, PenLine } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export const AppSidebar = ({ signout }: { signout: () => void }) => {
-  const pathname = usePathname();
+  interface Chat {
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+  }
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const { open, animate } = useSidebar();
-  const [user] = useAtom(userAtom);
+  let counter = 1;
 
-  // This is the single source of truth for the chat list
-  const { data: chats, isLoading: isLoadingChats } = useQuery({
-    queryKey: ["chats"],
-    queryFn: api.getChats,
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [titleInputs, setTitleInputs] = useState<Record<string, string>>({});
 
-  const createChatMutation = useMutation({
-    mutationFn: () => api.createChat({ title: "New Chat" }),
-    onSuccess: (newChat) => {
-      // Instantly update the UI by adding the new chat to the cached list
-      queryClient.setQueryData(["chats"], (oldData: any[] | undefined) =>
-        oldData ? [newChat, ...oldData] : [newChat]
+  const handledeleteChat = async (chatId: string) => {
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chats/${chatId}`,
+        {
+          withCredentials: true,
+        }
       );
-      router.push(`/chats/${newChat.id}`);
-    },
-    onError: (error) => {
-      console.error("Failed to create chat:", error);
-      // You could add a user-facing toast notification here
-    },
-  });
-
-  const handleNewChat = () => {
-    // Prevent action if chat list is not yet loaded
-    if (!chats) return;
-
-    // 1. Find if a chat with the default title already exists.
-    const emptyChat = chats.find((chat) => chat.title === "New Chat");
-
-    // 2. If it exists, navigate to it instead of creating a new one.
-    if (emptyChat) {
-      router.push(`/chats/${emptyChat.id}`);
-    } else {
-      // 3. Otherwise, create a new one.
-      createChatMutation.mutate();
+      setChats(chats.filter((chat) => chat.id !== chatId));
+      router.push("/"); // Redirect to home after deletion
+    } catch (error) {
+      console.error("Error deleting chat:", error);
     }
   };
 
-  const links = [
-    {
-      label: "Dashboard",
-      href: "/",
-      icon: (
-        <IconLayoutDashboard className="text-neutral-400 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Charts",
-      href: "/charts",
-      icon: <IconChartBar className="text-neutral-400 h-5 w-5 flex-shrink-0" />,
-    },
-  ];
+  const handleNewChat = async () => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chats`,
+        { title: `New Chat ${counter++}` },
+        {
+          withCredentials: true,
+        }
+      );
 
-  const bottomLinks = [
-    {
-      label: "Settings",
-      href: "/settings",
-      icon: <IconSettings className="text-neutral-400 h-5 w-5 flex-shrink-0" />,
-    },
-  ];
+      // Optional: navigate to the newly created chat
+      router.push(`/chats/${response.data.id}`);
+
+      // Refresh chat list in sidebar
+      getChats();
+    } catch (error) {
+      console.error("Error creating new chat:", error);
+    }
+  };
+
+  const handleChatTitleChange = async (chatId: string) => {
+    const newTitle = titleInputs[chatId];
+    if (!newTitle || !newTitle.trim()) return;
+
+    try {
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chats/${chatId}`,
+        { title: newTitle },
+        { withCredentials: true }
+      );
+
+      // update chats list
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId ? { ...chat, title: response.data.title } : chat
+        )
+      );
+
+      setEditingChatId(null); // Exit edit mode
+    } catch (error) {
+      console.error("Error updating chat title:", error);
+    }
+  };
+
+  const getChats = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/chats`,
+        {
+          withCredentials: true,
+        }
+      );
+      setChats(response.data);
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+    }
+  };
+
+  useEffect(() => {
+    getChats();
+  }, []);
 
   return (
-    <SidebarBody className="flex flex-col justify-between py-4">
-      {/* Top section: Logo, New Chat, Main links, and History */}
-      <div className="flex flex-col gap-2">
-        <SidebarLink
-          link={{
-            label: "ORACYN",
-            href: "/",
-            icon: (
-              <IconHexagonLetterO className="text-blue-500 h-7 w-7 flex-shrink-0" />
-            ),
-          }}
-          className="font-bold text-xl !text-white"
-        />
-
-        <button
-          onClick={handleNewChat}
-          disabled={createChatMutation.isPending || isLoadingChats}
-          className="flex items-center gap-2 w-full text-white bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed group/sidebar"
-        >
-          <div className="w-12 h-10 flex items-center justify-center">
-            <IconPlus size={20} className="flex-shrink-0" />
-          </div>
-          <motion.span
-            animate={{
-              display: open ? "inline-block" : "none",
-              opacity: open ? 1 : 0,
-            }}
-            className="whitespace-pre"
-          >
-            {createChatMutation.isPending ? "Creating..." : "New Chat"}
-          </motion.span>
-        </button>
-
-        <div className="flex flex-col gap-2 mt-4">
-          {links.map((link) => (
-            <SidebarLink
-              key={link.label}
-              link={link}
-              className={cn(pathname === link.href && "bg-zinc-800 rounded-lg")}
-            />
-          ))}
+    <div className="bg-gray-900 w-50 h-full flex flex-col items-center justify-center border-r  py-4">
+      {/* Logo or Brand Name */}
+      <Link href="/" className="text-white hover:underline">
+        <div className="text-white font-bold text-2xl mb-4 underline ">
+          ORACYN
         </div>
+      </Link>
+      {/* Navigation Links */}
+      <div className="mt-4 h-full w-full py-4 space-y-2 flex flex-col items-center justify-between">
+        <Button onClick={handleNewChat} className="cursor-pointer w-fit">
+          Create New Chat
+        </Button>
+        {/* Main Navigation */}
+        <div className="flex flex-col space-y-2 w-full">
+          {/* Dashboard */}
+          <Link href="/" className="text-white hover:underline">
+            <Button className="cursor-pointer w-fit">Dashboard</Button>
+          </Link>
+          {/* Charts */}
+          <Link href="/charts" className="text-white hover:underline">
+            <Button className="cursor-pointer w-fit">Charts</Button>
+          </Link>
+        </div>
+        {/* Chat Section */}
+        <div className="flex flex-col my-4 h-full w-full bg-slate-950">
+          <span className="text-slate-400 text-md font-semibold px-4 py-2 flex items-center justify-center">
+            Chats
+          </span>
+          <hr />
+          <div className="space-y-1 px-2">
+            {chats.length > 0 ? (
+              chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className="flex items-center justify-between gap-2 px-2 py-1 hover:bg-slate-800 rounded-md transition-colors duration-150"
+                >
+                  <Link
+                    href={`/chats/${chat.id}`}
+                    className="flex-1 overflow-hidden"
+                  >
+                    {editingChatId === chat.id ? (
+                      <input
+                        type="text"
+                        value={titleInputs[chat.id] || ""}
+                        onChange={(e) =>
+                          setTitleInputs((prev) => ({
+                            ...prev,
+                            [chat.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter chat title"
+                        className="w-full bg-transparent text-white placeholder:text-slate-400 border-b border-slate-600 focus:outline-none focus:border-slate-300 transition duration-200 text-sm sm:text-base"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="truncate text-white text-sm sm:text-base block">
+                        {chat.title?.trim().length === 0
+                          ? "Untitled Chat"
+                          : chat.title.length > 25
+                          ? `${chat.title.slice(0, 25)}...`
+                          : chat.title}
+                      </span>
+                    )}
+                  </Link>
 
-        <div className="flex flex-col gap-2 mt-4">
-          <motion.span
-            animate={{
-              display: open ? "inline-block" : "none",
-              opacity: open ? 1 : 0,
-            }}
-            className="text-xs text-neutral-500 px-4"
-          >
-            History
-          </motion.span>
-          <div className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-2">
-            {isLoadingChats && (
-              <span className="text-xs text-neutral-500 px-4">Loading...</span>
+                  <div className="flex items-center gap-1 pl-2 shrink-0">
+                    {editingChatId === chat.id ? (
+                      <button
+                        className="p-1 rounded hover:bg-slate-700"
+                        onClick={() => handleChatTitleChange(chat.id)}
+                      >
+                        <Check className="w-4 h-4 text-slate-400" />
+                      </button>
+                    ) : (
+                      <button
+                        className="p-1 rounded hover:bg-slate-700"
+                        onClick={() => {
+                          setEditingChatId(chat.id);
+                          setTitleInputs((prev) => ({
+                            ...prev,
+                            [chat.id]: chat.title,
+                          }));
+                        }}
+                      >
+                        <PenLine className="w-4 h-4 text-slate-400" />
+                      </button>
+                    )}
+                    <button
+                      className="p-1 rounded hover:bg-slate-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handledeleteChat(chat.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <span className="text-slate-300 text-sm px-4 py-2">
+                No chats available
+              </span>
             )}
-            {chats?.map((chat: { id: string; title: string }) => (
-              <SidebarLink
-                key={chat.id}
-                link={{
-                  href: `/chats/${chat.id}`,
-                  label: chat.title,
-                  icon: (
-                    <IconMessages className="text-neutral-400 h-5 w-5 flex-shrink-0" />
-                  ),
-                }}
-                className={cn(
-                  "!w-full",
-                  pathname === `/chats/${chat.id}` && "bg-zinc-800 rounded-lg"
-                )}
-              />
-            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col space-y-2 w-full">
+          {/* Settings */}
+          <Link href="/settings" className="text-white hover:underline">
+            <Button className="cursor-pointer w-fit">Settings</Button>
+          </Link>
+          {/* Charts */}
+          <div onClick={signout} className="text-white hover:underline">
+            <Button className="cursor-pointer w-fit">Sign Out</Button>
           </div>
         </div>
       </div>
 
-      {/* Bottom section: Settings and Sign Out */}
-      <div className="flex flex-col gap-2">
-        {bottomLinks.map((link) => (
-          <SidebarLink
-            key={link.label}
-            link={link}
-            className={cn(pathname === link.href && "bg-zinc-800 rounded-lg")}
-          />
-        ))}
-        <SidebarLink
-          onClick={signout}
-          link={{
-            label: "Sign Out",
-            href: "#",
-            icon: (
-              <IconLogout className="text-neutral-400 h-5 w-5 flex-shrink-0" />
-            ),
-          }}
-        />
+      <div className="mt-auto p-4 text-white">
+        <p>© 2025 ORACYN</p>
+        <p>
+          <a
+            href="https://github.com/aayush-wiz"
+            target="_blank"
+            className="text-white hover:underline"
+          >
+            GitHub
+          </a>
+        </p>
       </div>
-    </SidebarBody>
+    </div>
   );
 };
+
+export default AppSidebar;
