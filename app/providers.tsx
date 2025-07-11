@@ -8,7 +8,6 @@ import { Provider as JotaiProvider, useSetAtom, useAtom } from "jotai"; // Impor
 import { api } from "@/lib/api";
 import { userAtom, User } from "@/lib/atoms";
 import { useAuth } from "@/hooks/useAuth";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 
 const FullPageLoader = () => (
@@ -85,16 +84,12 @@ function AppLayoutController({ children }: { children: React.ReactNode }) {
 
   if (user) {
     return (
-      <SidebarProvider>
-        <div className="h-screen w-full flex bg-black text-white">
-          <AppSidebar signout={signout} />
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-              {children}
-            </div>
-          </main>
-        </div>
-      </SidebarProvider>
+      <div className="h-screen w-full flex bg-black text-white">
+        <AppSidebar signout={signout} />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     );
   }
 

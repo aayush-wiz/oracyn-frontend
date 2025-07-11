@@ -177,7 +177,7 @@ const Signup = () => {
             <button
               type="submit"
               disabled={isSigningUp}
-              className="w-full bg-slate-800 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6  text-white inline-block disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-slate-800 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="absolute inset-0 overflow-hidden rounded-full">
                 <span className="absolute inset-0 rounded-full bg-gradient-to-r from-sky-400/0 via-sky-600/90 to-sky-600/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />

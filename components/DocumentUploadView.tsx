@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUpload } from "@/components/ui/file-upload"; // Assuming this is the correct path
+import { FileUpload } from "@/components/ui/file-upload";
 import { IconAlertTriangle, IconLoader2 } from "@tabler/icons-react";
 
 export const DocumentUploadView = ({

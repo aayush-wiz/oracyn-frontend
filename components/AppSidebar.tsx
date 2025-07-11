@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Button from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Trash2, Check, PenLine } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -21,20 +21,24 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
   const [titleInputs, setTitleInputs] = useState<Record<string, string>>({});
   let counter = 1;
 
-  const handledeleteChat = async (chatId: string) => {
-    try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/chats/${chatId}`,
-        {
-          withCredentials: true,
-        }
-      );
-      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-      router.push("/");
-    } catch (error) {
-      console.error("Error deleting chat:", error);
-    }
-  };
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      try {
+        await axios.delete(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/chats/${chatId}`,
+          { withCredentials: true }
+        );
+
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+        // Navigate to home
+        router.push("/");
+      } catch (error) {
+        console.error("Error deleting chat:", error);
+      }
+    },
+    [router]
+  );
 
   const handleNewChat = async () => {
     try {
@@ -106,17 +110,17 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
         </Button>
 
         <div className="flex flex-col gap-2">
-          <Link href="/" passHref>
+          <Link href="/">
             <Button className="w-full cursor-pointer">Dashboard</Button>
           </Link>
-          <Link href="/charts" passHref>
+          <Link href="/charts">
             <Button className="w-full cursor-pointer">Charts</Button>
           </Link>
         </div>
 
         {/* Chat Section */}
         <div className="mt-6">
-          <h2 className="text-slate-400 text-sm font-semibold mb-2 text-center">
+          <h2 className="text-slate-400 border-b-2 font-semibold mb-2 text-center">
             Chats
           </h2>
           <div className="space-y-1 max-h-[calc(100vh-350px)] overflow-y-auto pr-1">
@@ -124,12 +128,10 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
               chats.map((chat) => (
                 <div
                   key={chat.id}
-                  className="flex items-center justify-between gap-2 px-2 py-1 rounded-md hover:bg-slate-800 transition-all"
+                  className="flex items-center justify-between hover:bg-slate-800 px-4 py-2 rounded-md transition-all group"
                 >
-                  <Link
-                    href={`/chats/${chat.id}`}
-                    className="flex-1 overflow-hidden"
-                  >
+                  {/* Left Section */}
+                  <div className="flex-1 overflow-hidden">
                     {editingChatId === chat.id ? (
                       <input
                         type="text"
@@ -145,22 +147,27 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                         autoFocus
                       />
                     ) : (
-                      <span className="truncate block text-sm">
+                      <Link
+                        href={`/chats/${chat.id}`}
+                        className="text-sm font-medium text-slate-200 truncate block group-hover:text-white"
+                      >
                         {chat.title?.trim().length === 0
                           ? "Untitled Chat"
                           : chat.title.length > 25
                           ? `${chat.title.slice(0, 25)}...`
                           : chat.title}
-                      </span>
+                      </Link>
                     )}
-                  </Link>
-                  <div className="flex items-center gap-1">
+                  </div>
+
+                  {/* Right Section - Action Buttons */}
+                  <div className="flex items-center gap-1 ml-2">
                     {editingChatId === chat.id ? (
                       <button
                         onClick={() => handleChatTitleChange(chat.id)}
-                        className="p-1 hover:bg-slate-700 rounded cursor-pointer"
+                        className="p-1 hover:bg-slate-700 rounded transition"
                       >
-                        <Check className="w-4 h-4 text-slate-400" />
+                        <Check className="w-4 h-4 text-green-400 group-hover:text-green-500" />
                       </button>
                     ) : (
                       <button
@@ -171,19 +178,16 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
                             [chat.id]: chat.title,
                           }));
                         }}
-                        className="p-1 hover:bg-slate-700 rounded cursor-pointer"
+                        className="p-1 hover:bg-slate-700 rounded cursor-pointer transition"
                       >
-                        <PenLine className="w-4 h-4 text-slate-400" />
+                        <PenLine className="w-4 h-4 text-slate-400 group-hover:text-slate-200" />
                       </button>
                     )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handledeleteChat(chat.id);
-                      }}
-                      className="p-1 hover:bg-slate-700 rounded cursor-pointer"
+                      onClick={() => handleDeleteChat(chat.id)}
+                      className="p-1 hover:bg-slate-700 rounded cursor-pointer transition"
                     >
-                      <Trash2 className="w-4 h-4 text-slate-400" />
+                      <Trash2 className="w-4 h-4 text-red-400 group-hover:text-red-500" />
                     </button>
                   </div>
                 </div>
