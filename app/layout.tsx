@@ -1,6 +1,7 @@
 import Providers from "./providers"; // Import the new client component
 import "./globals.css";
 import { Inter } from "next/font/google";
+import RouteLoader from "@/components/RouteLoader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-black text-white min-h-screen`}>
+        <RouteLoader />
         <Providers>{children}</Providers>
       </body>
     </html>

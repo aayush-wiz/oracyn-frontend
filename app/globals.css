@@ -20,3 +20,14 @@
     transform: translate(-50%, -40%) scale(1);
   }
 }
+
+/* Customize NProgress bar */
+#nprogress .bar {
+  background: #f59e0b; /* amber-500 */
+  height: 3px;
+}
+
+/* Hide spinner if showSpinner is false */
+#nprogress .spinner {
+  display: none !important;
+}

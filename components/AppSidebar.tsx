@@ -116,6 +116,9 @@ export const AppSidebar = ({ signout }: { signout: () => void }) => {
           <Link href="/charts">
             <Button className="w-full cursor-pointer">Charts</Button>
           </Link>
+          <Link href="/documents">
+            <Button className="w-full cursor-pointer">Documents</Button>
+          </Link>
         </div>
 
         {/* Chat Section */}
